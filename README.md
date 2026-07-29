@@ -22,6 +22,7 @@ Validation:
 npm run typecheck
 npm run test
 npm run build
+npm run build:pages
 ```
 
 Monthlane stores event data in the browser's IndexedDB database named
@@ -34,3 +35,11 @@ and restore support will be added before cloud synchronization.
 - `T`: return to today
 - `←` / `→`: switch months
 - `Esc`: close the event editor
+
+## GitHub Pages
+
+Push the `main` branch to `Aprollov/monthlane`, then open **Settings → Pages**
+and select **GitHub Actions** as the source. Every later push to `main` runs the
+checked-in deployment workflow and publishes the static app at:
+
+`https://aprollov.github.io/monthlane/`
