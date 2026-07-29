@@ -7,7 +7,7 @@ import {
 } from "./types.ts";
 
 const DB_NAME = "monthlane";
-const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 const requestValue = <T,>(request: IDBRequest<T>) =>
   new Promise<T>((resolve, reject) => {
@@ -22,32 +22,49 @@ const transactionDone = (transaction: IDBTransaction) =>
     transaction.onabort = () => reject(transaction.error);
   });
 
+type SchemaDatabase = Pick<IDBDatabase, "objectStoreNames" | "createObjectStore">;
+
+export const upgradeMonthlaneDb = (db: SchemaDatabase) => {
+  if (!db.objectStoreNames.contains("events")) {
+    const events = db.createObjectStore("events", { keyPath: "id" });
+    events.createIndex("startDate", "startDate");
+    events.createIndex("categoryId", "categoryId");
+    events.createIndex("updatedAt", "updatedAt");
+  }
+  if (!db.objectStoreNames.contains("categories")) {
+    db.createObjectStore("categories", { keyPath: "id" });
+  }
+  if (!db.objectStoreNames.contains("recurrenceExceptions")) {
+    const exceptions = db.createObjectStore("recurrenceExceptions", { keyPath: "id" });
+    exceptions.createIndex("seriesId", "seriesId");
+  }
+  if (!db.objectStoreNames.contains("tasks")) {
+    const tasks = db.createObjectStore("tasks", { keyPath: "id" });
+    tasks.createIndex("status", "status");
+    tasks.createIndex("bucket", "bucket");
+    tasks.createIndex("scheduledDate", "scheduledDate");
+    tasks.createIndex("dueDate", "dueDate");
+    tasks.createIndex("updatedAt", "updatedAt");
+    tasks.createIndex("deletedAt", "deletedAt");
+    tasks.createIndex("categoryId", "categoryId");
+  }
+  if (!db.objectStoreNames.contains("settings")) {
+    db.createObjectStore("settings", { keyPath: "id" });
+  }
+  if (!db.objectStoreNames.contains("syncMetadata")) {
+    db.createObjectStore("syncMetadata", { keyPath: "id" });
+  }
+};
+
 export const openMonthlaneDb = () =>
   new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains("events")) {
-        const events = db.createObjectStore("events", { keyPath: "id" });
-        events.createIndex("startDate", "startDate");
-        events.createIndex("categoryId", "categoryId");
-        events.createIndex("updatedAt", "updatedAt");
-      }
-      if (!db.objectStoreNames.contains("categories")) {
-        db.createObjectStore("categories", { keyPath: "id" });
-      }
-      if (!db.objectStoreNames.contains("recurrenceExceptions")) {
-        const exceptions = db.createObjectStore("recurrenceExceptions", { keyPath: "id" });
-        exceptions.createIndex("seriesId", "seriesId");
-      }
-      if (!db.objectStoreNames.contains("settings")) {
-        db.createObjectStore("settings", { keyPath: "id" });
-      }
-      if (!db.objectStoreNames.contains("syncMetadata")) {
-        db.createObjectStore("syncMetadata", { keyPath: "id" });
-      }
+    request.onupgradeneeded = () => upgradeMonthlaneDb(request.result);
+    request.onblocked = () => reject(new Error("Monthlane database upgrade is blocked. Close other Monthlane tabs and reload."));
+    request.onsuccess = () => {
+      request.result.onversionchange = () => request.result.close();
+      resolve(request.result);
     };
-    request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
 

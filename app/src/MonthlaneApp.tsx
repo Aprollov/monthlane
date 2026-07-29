@@ -7,20 +7,12 @@ import { ScopeDialog, type RecurrenceScope } from "./ScopeDialog";
 import { SettingsDrawer } from "./SettingsDrawer";
 import { addMonths, buildMonthGrid, longDateLabel, monthLabel, toDateKey } from "./dates";
 import { ensureCategories, listCategories, listEvents, listExceptions, saveEvent, saveException, softDeleteEvent } from "./database";
+import { getDeviceId } from "./device";
 import { CalendarIcon, ChevronLeft, ChevronRight, Menu, Plus, Search, Settings, Sliders } from "./icons";
 import { expandEvents, previousDateKey } from "./recurrence";
 import type { CalendarEvent, Category, EventDraft, RecurrenceException } from "./types";
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-const deviceId = () => {
-  const key = "monthlane-device-id";
-  const current = localStorage.getItem(key);
-  if (current) return current;
-  const created = crypto.randomUUID();
-  localStorage.setItem(key, created);
-  return created;
-};
 
 export function MonthlaneApp() {
   const today = useMemo(() => new Date(), []);
@@ -146,7 +138,7 @@ export function MonthlaneApp() {
       recurrence: draft.recurrence,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
-      deviceId: existing?.deviceId ?? deviceId(),
+      deviceId: existing?.deviceId ?? getDeviceId(),
     };
   };
 
@@ -197,7 +189,7 @@ export function MonthlaneApp() {
           type: "deleted",
           createdAt: now,
           updatedAt: now,
-          deviceId: deviceId(),
+          deviceId: getDeviceId(),
         });
       } else if (scope === "following") {
         await saveEvent({
@@ -227,7 +219,7 @@ export function MonthlaneApp() {
         replacement,
         createdAt: now,
         updatedAt: now,
-        deviceId: deviceId(),
+        deviceId: getDeviceId(),
       });
       await refresh();
       setScopeRequest(undefined);

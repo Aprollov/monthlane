@@ -65,6 +65,51 @@ export type MonthlaneBackup = {
   exceptions: RecurrenceException[];
 };
 
+export type TaskKind = "task" | "readLater";
+export type TaskStatus = "open" | "completed" | "archived";
+export type TaskBucket = "inbox" | "thisWeek" | "laterRead" | "someday";
+
+export type FlowTask = {
+  id: string;
+  title: string;
+  notes?: string;
+  kind: TaskKind;
+  status: TaskStatus;
+  bucket: TaskBucket;
+  scheduledDate?: string;
+  scheduledTime?: string;
+  estimatedMinutes?: number;
+  dueDate?: string;
+  categoryId?: string;
+  tags: string[];
+  url?: string;
+  sourceType?: string;
+  siteName?: string;
+  pageTitle?: string;
+  thumbnailUrl?: string;
+  linkedEventId?: string;
+  sortOrder: number;
+  completedAt?: string;
+  archivedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+  deviceId: string;
+};
+
+export type CreateTaskInput = Pick<FlowTask, "title"> & Partial<Omit<
+  FlowTask,
+  "id" | "title" | "status" | "sortOrder" | "createdAt" | "updatedAt" | "deviceId"
+>> & {
+  status?: TaskStatus;
+  sortOrder?: number;
+};
+
+export type UpdateTaskInput = Partial<Omit<
+  FlowTask,
+  "id" | "createdAt" | "updatedAt" | "deviceId"
+>>;
+
 export const defaultCategories: Category[] = [
   ["work", "Work", "#6F8191"],
   ["personal", "Personal", "#8A7894"],
