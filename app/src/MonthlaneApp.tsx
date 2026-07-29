@@ -8,9 +8,15 @@ import { SettingsDrawer } from "./SettingsDrawer";
 import { addMonths, buildMonthGrid, longDateLabel, monthLabel, toDateKey } from "./dates";
 import { ensureCategories, listCategories, listEvents, listExceptions, saveEvent, saveException, softDeleteEvent } from "./database";
 import { getDeviceId } from "./device";
+import { FlowNavigation } from "./flow/FlowNavigation";
+import { FlowWorkspace, type FlowView } from "./flow/FlowWorkspace";
+import { QuickCapture } from "./flow/QuickCapture";
+import { TaskEditorDrawer } from "./flow/TaskEditorDrawer";
+import { inboxTasks, thisWeekTasks, todayTasks } from "./flow/taskFilters";
+import { taskRepository } from "./flow/taskRepository";
 import { CalendarIcon, ChevronLeft, ChevronRight, Menu, Plus, Search, Settings, Sliders } from "./icons";
 import { expandEvents, previousDateKey } from "./recurrence";
-import type { CalendarEvent, Category, EventDraft, RecurrenceException } from "./types";
+import type { CalendarEvent, Category, CreateTaskInput, EventDraft, FlowTask, RecurrenceException, TaskBucket, UpdateTaskInput } from "./types";
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -21,6 +27,8 @@ export function MonthlaneApp() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [exceptions, setExceptions] = useState<RecurrenceException[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [tasks, setTasks] = useState<FlowTask[]>([]);
+  const [activeView, setActiveView] = useState<FlowView>("month");
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
     try { return new Set(JSON.parse(localStorage.getItem("monthlane-hidden-calendars") ?? "[]")); }
@@ -30,6 +38,9 @@ export function MonthlaneApp() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [captureOpen, setCaptureOpen] = useState(false);
+  const [captureDefaults, setCaptureDefaults] = useState<Omit<CreateTaskInput, "title">>({ bucket: "inbox" });
+  const [editingTask, setEditingTask] = useState<FlowTask>();
   const [editingEvent, setEditingEvent] = useState<CalendarEvent>();
   const [scopeRequest, setScopeRequest] = useState<{ action: "edit" | "delete"; draft?: EventDraft }>();
   const [toast, setToast] = useState("");
@@ -37,10 +48,16 @@ export function MonthlaneApp() {
 
   const refresh = useCallback(async () => {
     await ensureCategories();
-    const [storedEvents, storedCategories, storedExceptions] = await Promise.all([listEvents(), listCategories(), listExceptions()]);
+    const [storedEvents, storedCategories, storedExceptions, storedTasks] = await Promise.all([
+      listEvents(),
+      listCategories(),
+      listExceptions(),
+      taskRepository.getAllTasks(),
+    ]);
     setEvents(storedEvents);
     setCategories(storedCategories);
     setExceptions(storedExceptions);
+    setTasks(storedTasks);
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
@@ -70,23 +87,35 @@ export function MonthlaneApp() {
     setDrawerOpen(true);
   }, [selectedDate]);
 
+  const openCapture = useCallback((defaults: Omit<CreateTaskInput, "title"> = { bucket: "inbox" }) => {
+    setCaptureDefaults(defaults);
+    setCaptureOpen(true);
+  }, []);
+
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
       if (target.matches("input, textarea, select") || target.isContentEditable) return;
       if (event.key.toLowerCase() === "n") openCreate();
+      if (event.key.toLowerCase() === "q") openCapture({ bucket: "inbox" });
+      if (event.key === "/") {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
       if (event.key.toLowerCase() === "t") goToToday();
       if (event.key === "Escape") {
         setSearchOpen(false);
         setSettingsOpen(false);
         setDrawerOpen(false);
+        setCaptureOpen(false);
+        setEditingTask(undefined);
       }
       if (event.key === "ArrowLeft") setVisibleMonth((month) => addMonths(month, -1));
       if (event.key === "ArrowRight") setVisibleMonth((month) => addMonths(month, 1));
     };
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, [goToToday, openCreate]);
+  }, [goToToday, openCapture, openCreate]);
 
   const days = useMemo(() => buildMonthGrid(visibleMonth), [visibleMonth]);
   const expandedEvents = useMemo(
@@ -246,6 +275,46 @@ export function MonthlaneApp() {
   };
 
   const categoryById = (id: string) => categories.find((category) => category.id === id);
+  const todayKey = toDateKey(today);
+  const flowCounts = {
+    inbox: inboxTasks(tasks).length,
+    thisWeek: thisWeekTasks(tasks).length,
+    today: todayTasks(tasks, todayKey).length,
+  };
+
+  const selectView = (view: FlowView) => {
+    setActiveView(view);
+    setSidebarOpen(false);
+  };
+
+  const createTask = async (input: CreateTaskInput) => {
+    await taskRepository.createTask(input);
+    await refresh();
+    notify("Task captured.");
+  };
+
+  const saveTask = async (id: string, changes: UpdateTaskInput) => {
+    const current = tasks.find((task) => task.id === id);
+    const { status, ...fields } = changes;
+    await taskRepository.updateTask(id, fields);
+    if (status && status !== current?.status) {
+      if (status === "completed") await taskRepository.completeTask(id);
+      if (status === "open") await taskRepository.reopenTask(id);
+      if (status === "archived") await taskRepository.archiveTask(id);
+    }
+    await refresh();
+    notify("Task updated.");
+  };
+
+  const moveTask = async (task: FlowTask, bucket: TaskBucket, scheduledDate?: string) => {
+    await taskRepository.updateTask(task.id, {
+      bucket,
+      scheduledDate: bucket === "inbox" ? undefined : scheduledDate ?? task.scheduledDate,
+      scheduledTime: bucket === "inbox" ? undefined : task.scheduledTime,
+    });
+    await refresh();
+    notify(bucket === "inbox" ? "Returned to Inbox." : scheduledDate === todayKey ? "Moved to Today." : "Moved to This Week.");
+  };
 
   return (
     <main className="appShell">
@@ -255,15 +324,23 @@ export function MonthlaneApp() {
           <div className="brandMark" aria-hidden="true"><span>M</span></div>
           <div className="brandCopy"><strong>Monthlane</strong><span>Plan life, one month at a time.</span></div>
         </div>
-        <div className="monthNavigation">
+        {activeView === "month" ? <div className="monthNavigation">
           <button className="iconButton" onClick={() => setVisibleMonth((month) => addMonths(month, -1))} aria-label="Previous month" title="Previous month"><ChevronLeft /></button>
           <h1>{monthLabel(visibleMonth)}</h1>
           <button className="iconButton" onClick={() => setVisibleMonth((month) => addMonths(month, 1))} aria-label="Next month" title="Next month"><ChevronRight /></button>
           <button className="secondaryButton todayButton" onClick={goToToday}>Today</button>
-        </div>
+        </div> : <div className="flowTopTitle">Calendar + Flow</div>}
         <div className="topActions">
           <button className="iconButton" onClick={() => setSearchOpen(true)} aria-label="Search events" title="Search events"><Search /></button>
-          <button className="primaryButton newEventButton" onClick={() => openCreate()}><Plus /><span>New event</span></button>
+          <button className="primaryButton newEventButton" onClick={() => activeView === "month"
+            ? openCreate()
+            : openCapture(activeView === "today"
+              ? { bucket: "thisWeek", scheduledDate: todayKey }
+              : activeView === "thisWeek"
+                ? { bucket: "thisWeek" }
+                : { bucket: "inbox" })}>
+            <Plus /><span>{activeView === "month" ? "New event" : "Add task"}</span>
+          </button>
           <button className="iconButton" onClick={() => setSettingsOpen(true)} aria-label="Open settings" title="Settings"><Settings /></button>
         </div>
       </header>
@@ -286,6 +363,11 @@ export function MonthlaneApp() {
               />
             </label>
           </section>
+          <section className="sidebarSection calendarNavigation">
+            <div className="sectionTitle"><span>Calendar</span></div>
+            <button className={`sidebarNavButton ${activeView === "month" ? "active" : ""}`} onClick={() => selectView("month")}><CalendarIcon /><span>Month</span></button>
+          </section>
+          <FlowNavigation activeView={activeView} counts={flowCounts} onSelect={selectView} />
           <section className="sidebarSection">
             <div className="sectionTitle"><span>Calendars</span><Sliders /></div>
             <div className="categoryList">
@@ -308,10 +390,14 @@ export function MonthlaneApp() {
               })}
             </div>
           </section>
+          <div className="sidebarUtilities">
+            <button onClick={() => { setSearchOpen(true); setSidebarOpen(false); }}><Search /><span>Search</span></button>
+            <button onClick={() => { setSettingsOpen(true); setSidebarOpen(false); }}><Settings /><span>Settings</span></button>
+          </div>
           <div className="sidebarFooter"><span className="statusDot" />Saved on this device</div>
         </aside>
 
-        <section className="calendarArea">
+        {activeView === "month" ? <section className="calendarArea">
           <div className="weekdayRow" aria-hidden="true">
             {weekdays.map((day) => <span key={day}>{day}</span>)}
           </div>
@@ -378,15 +464,31 @@ export function MonthlaneApp() {
               </button>
             )) : <p className="clearDay">Nothing planned. Leave it open, or add a moment.</p>}
           </section>
-        </section>
+        </section> : <FlowWorkspace
+          view={activeView}
+          tasks={tasks}
+          categories={categories}
+          today={todayKey}
+          onCapture={() => openCapture(activeView === "today"
+            ? { bucket: "thisWeek", scheduledDate: todayKey }
+            : activeView === "thisWeek"
+              ? { bucket: "thisWeek" }
+              : { bucket: "inbox" })}
+          onEdit={setEditingTask}
+          onComplete={async (task) => { await taskRepository.completeTask(task.id); await refresh(); notify("Task completed."); }}
+          onReopen={async (task) => { await taskRepository.reopenTask(task.id); await refresh(); notify("Task reopened."); }}
+          onArchive={async (task) => { await taskRepository.archiveTask(task.id); await refresh(); notify("Task archived."); }}
+          onMove={(task, bucket, scheduledDate) => void moveTask(task, bucket, scheduledDate)}
+          onReorder={async (ids) => { await taskRepository.reorderTasks(ids); await refresh(); }}
+        />}
       </div>
 
       <nav className="mobileBottomNav" aria-label="Primary navigation">
-        <button onClick={goToToday}><CalendarIcon /><span>Today</span></button>
-        <button onClick={() => setSearchOpen(true)}><Search /><span>Search</span></button>
-        <button className="mobileAdd" onClick={() => openCreate()}><Plus /><span>Add</span></button>
-        <button onClick={() => setSidebarOpen(true)}><Sliders /><span>Calendars</span></button>
-        <button onClick={() => setSettingsOpen(true)}><Settings /><span>Settings</span></button>
+        <button className={activeView === "month" ? "active" : ""} onClick={() => selectView("month")}><CalendarIcon /><span>Month</span></button>
+        <button className={activeView === "today" ? "active" : ""} onClick={() => selectView("today")}><CalendarIcon /><span>Today</span></button>
+        <button className={activeView === "inbox" ? "active" : ""} onClick={() => selectView("inbox")}><Sliders /><span>Inbox</span></button>
+        <button className="mobileAdd" onClick={() => activeView === "month" ? openCreate() : openCapture(activeView === "today" ? { bucket: "thisWeek", scheduledDate: todayKey } : activeView === "thisWeek" ? { bucket: "thisWeek" } : { bucket: "inbox" })}><Plus /><span>Add</span></button>
+        <button onClick={() => setSidebarOpen(true)}><Menu /><span>More</span></button>
       </nav>
 
       <EventDrawer open={drawerOpen} date={selectedDate} event={editingEvent} categories={categories} onClose={() => setDrawerOpen(false)} onSave={saveDraft} onDelete={editingEvent ? removeEvent : undefined} />
@@ -396,6 +498,15 @@ export function MonthlaneApp() {
         setSearchOpen(false);
         notify(`Showing ${event.title}.`);
       }} />
+      <QuickCapture open={captureOpen} defaults={captureDefaults} onClose={() => setCaptureOpen(false)} onCreate={createTask} />
+      <TaskEditorDrawer
+        open={Boolean(editingTask)}
+        task={editingTask}
+        categories={categories}
+        onClose={() => setEditingTask(undefined)}
+        onSave={saveTask}
+        onDelete={async (id) => { await taskRepository.softDeleteTask(id); await refresh(); notify("Task deleted."); }}
+      />
       <ScopeDialog open={Boolean(scopeRequest)} action={scopeRequest?.action ?? "edit"} onChoose={(scope) => void chooseScope(scope)} onClose={() => setScopeRequest(undefined)} />
       <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} onChanged={refresh} notify={notify} />
       {toast && <div className="toast" role="status">{toast}</div>}

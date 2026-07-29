@@ -35,6 +35,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .brandCopy span { color: var(--text-muted); font-size: 10px; margin-top: 3px; letter-spacing: .02em; }
 .monthNavigation { gap: 4px; }
 .monthNavigation h1 { font-family: Georgia, "Times New Roman", serif; font-size: 25px; font-weight: 500; min-width: 190px; text-align: center; margin: 0 6px; letter-spacing: -.025em; }
+.flowTopTitle { justify-self: center; color: var(--text-muted); font-family: Georgia, "Times New Roman", serif; font-size: 17px; }
 .topActions { justify-content: flex-end; gap: 8px; }
 .iconButton { width: 38px; height: 38px; border: 0; border-radius: 8px; display: inline-grid; place-items: center; background: transparent; cursor: pointer; }
 .iconButton:hover { background: var(--surface-hover); }
@@ -65,6 +66,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .categoryDot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
 .categoryRow small { color: var(--text-muted); }
 .sidebarFooter { margin-top: auto; color: var(--text-muted); font-size: 11px; display: flex; align-items: center; gap: 8px; padding: 12px 8px; }
+.calendarNavigation { padding-bottom: 12px; }
+.sidebarNavButton, .flowNavList button, .sidebarUtilities button { width: 100%; min-height: 34px; border: 0; border-radius: 7px; background: transparent; display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 9px; padding: 0 8px; color: var(--text-secondary); text-align: left; cursor: pointer; font-size: 12px; }
+.sidebarNavButton:hover, .flowNavList button:hover, .sidebarUtilities button:hover, .sidebarNavButton.active, .flowNavList button.active { background: var(--surface-hover); color: var(--text-primary); }
+.sidebarNavButton svg, .flowNavList svg, .sidebarUtilities svg { width: 16px; height: 16px; }
+.flowNavigation { padding-bottom: 18px; }
+.flowNavList { display: grid; gap: 2px; }
+.flowNavList small { color: var(--text-muted); font-size: 10px; }
+.sidebarUtilities { display: grid; gap: 2px; padding: 12px 6px 0; border-top: 1px solid var(--border); }
 .statusDot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .calendarArea { min-width: 0; padding-top: 18px; display: flex; flex-direction: column; }
 .weekdayRow { height: 30px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); align-items: center; color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
@@ -157,6 +166,51 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .emptySearch { min-height: 180px; display: grid; place-content: center; justify-items: center; gap: 6px; color: var(--text-secondary); }
 .emptySearch strong { font-family: Georgia, "Times New Roman", serif; font-size: 18px; font-weight: 500; }
 .emptySearch span { color: var(--text-muted); font-size: 11px; }
+.flowWorkspace { min-width: 0; height: 100%; overflow: auto; padding: 42px clamp(22px, 5vw, 72px) 70px; }
+.flowHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; max-width: 900px; margin: 0 auto 28px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.flowHeader h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 34px; font-weight: 500; letter-spacing: -.03em; }
+.flowHeader > div > p:last-child { margin: 8px 0 0; color: var(--text-muted); font-size: 12px; }
+.flowHeader .primaryButton { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; }
+.flowHeader .primaryButton svg { width: 16px; }
+.flowSection, .weekProgress { max-width: 900px; margin: 0 auto; }
+.flowSection h2 { margin: 0 0 10px; font-family: Georgia, "Times New Roman", serif; font-size: 19px; font-weight: 500; }
+.weekProgress { display: flex; align-items: center; gap: 12px; margin-bottom: 23px; }
+.weekProgress > div { width: 150px; height: 4px; overflow: hidden; border-radius: 99px; background: var(--surface-secondary); }
+.weekProgress > div span { display: block; height: 100%; background: var(--accent); }
+.weekProgress small { color: var(--text-muted); font-size: 10px; }
+.taskList { border-top: 1px solid var(--border); }
+.taskRow { min-height: 52px; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); padding: 5px 4px; background: transparent; }
+.taskRow:hover { background: rgb(233 233 227 / 45%); }
+.taskRow.completed .taskContent strong { text-decoration: line-through; color: var(--text-muted); }
+.taskCheckbox { width: 18px; height: 18px; display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: 5px; background: var(--surface); color: white; padding: 0; cursor: pointer; }
+.taskCheckbox.checked { border-color: var(--accent); background: var(--accent); }
+.taskCheckbox svg { width: 13px; height: 13px; }
+.taskContent { min-width: 0; border: 0; background: transparent; display: grid; gap: 4px; padding: 6px 0; text-align: left; cursor: pointer; }
+.taskTitleLine { min-width: 0; display: flex; align-items: center; gap: 7px; }
+.taskTitleLine strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
+.taskMeta { display: flex; flex-wrap: wrap; gap: 9px; color: var(--text-muted); font-size: 9px; }
+.taskRowActions { display: flex; align-items: center; gap: 2px; opacity: .25; transition: opacity 120ms ease; }
+.taskRow:hover .taskRowActions, .taskRow:focus-within .taskRowActions { opacity: 1; }
+.taskRowActions > button { width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; display: grid; place-items: center; cursor: pointer; }
+.taskRowActions > button:hover { background: var(--surface-hover); }
+.taskRowActions > button:disabled { opacity: .25; cursor: default; }
+.taskRowActions svg { width: 14px; height: 14px; }
+.taskMoveMenu { position: relative; width: 29px; height: 29px; display: grid; place-items: center; }
+.taskMoveMenu select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.emptyTaskList { margin: 0; min-height: 150px; display: grid; place-items: center; border-top: 1px solid var(--border); color: var(--text-muted); font-family: Georgia, "Times New Roman", serif; font-size: 15px; }
+.unfinishedSection { margin-top: 38px; }
+.completedGroup { margin-bottom: 28px; }
+.completedGroup h2 { color: var(--text-secondary); font-family: var(--font); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.flowSectionHeading { display: flex; align-items: end; justify-content: space-between; gap: 18px; }
+.flowSectionHeading small { margin-bottom: 10px; color: var(--text-muted); font-size: 9px; }
+.captureScrim { position: fixed; inset: 0; z-index: 90; display: grid; place-items: start center; padding: 15vh 18px 18px; background: rgb(32 34 31 / 26%); }
+.quickCapture { width: min(650px, 100%); min-height: 74px; display: grid; grid-template-columns: 38px minmax(0, 1fr) auto 38px; align-items: center; gap: 10px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-panel); padding: 12px 14px; }
+.captureIcon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px; background: var(--accent-soft); color: var(--accent); }
+.captureIcon svg { width: 18px; }
+.captureInput { display: grid; gap: 3px; }
+.captureInput label { color: var(--text-muted); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.captureInput input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--text-primary); font-size: 17px; }
+.taskEditor { width: min(470px, 100%); }
 .toast { position: fixed; right: 22px; bottom: 22px; z-index: 80; background: #30342f; color: white; border-radius: 8px; padding: 11px 15px; font-size: 12px; box-shadow: var(--shadow-panel); animation: toastIn 160ms ease-out; }
 @keyframes toastIn { from { opacity: 0; transform: translateY(6px); } }
 
@@ -184,6 +238,16 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .sidebarOpen { transform: translateX(0); }
   .sidebarScrim { position: fixed; inset: 0; z-index: 55; border: 0; background: rgb(32 34 31 / 22%); width: 100%; height: 100%; }
   .calendarArea { padding: 12px 10px 0; display: block; }
+  .flowWorkspace { height: calc(100dvh - 58px); padding: 28px 16px 100px; }
+  .flowHeader { margin-bottom: 20px; }
+  .flowHeader h1 { font-size: 29px; }
+  .flowHeader > div > p:last-child { max-width: 210px; }
+  .flowHeader .primaryButton { width: 38px; padding: 0; justify-content: center; font-size: 0; }
+  .taskRow { grid-template-columns: 22px minmax(0, 1fr) auto; }
+  .taskRowActions > button:nth-child(-n + 2) { display: none; }
+  .taskRowActions { opacity: 1; }
+  .quickCapture { grid-template-columns: 34px minmax(0, 1fr) 38px; }
+  .quickCapture .primaryButton { display: none; }
   .weekdayRow { height: 25px; }
   .weekdayRow span { padding: 0; text-align: center; font-size: 9px; }
   .calendarGrid { height: min(56vh, 410px); min-height: 340px; grid-template-rows: repeat(6, 1fr); border-radius: 8px; box-shadow: none; }
@@ -205,6 +269,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .clearDay { color: var(--text-muted); font-family: Georgia, "Times New Roman", serif; font-size: 14px; padding: 15px 0; margin: 0; border-top: 1px solid var(--border); }
   .mobileBottomNav { position: fixed; z-index: 30; inset: auto 0 0; height: calc(68px + env(safe-area-inset-bottom)); padding: 6px 8px env(safe-area-inset-bottom); display: grid; grid-template-columns: repeat(5, 1fr); background: rgb(253 253 251 / 96%); border-top: 1px solid var(--border); }
   .mobileBottomNav button { border: 0; background: transparent; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 9px; }
+  .mobileBottomNav button.active { color: var(--accent); font-weight: 700; }
   .mobileBottomNav .mobileAdd { color: var(--accent); font-weight: 700; }
   .mobileBottomNav .mobileAdd svg { background: var(--accent); color: white; border-radius: 9px; width: 34px; height: 30px; padding: 7px; }
   .eventDrawer { width: 100%; padding: 22px 20px calc(24px + env(safe-area-inset-bottom)); }
