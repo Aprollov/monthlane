@@ -140,6 +140,23 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .accountCard span { color: var(--text-muted); font-size: 11px; }
 .settingsError { margin: 0; color: var(--danger); font-size: 11px; line-height: 1.5; }
 .visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.searchDrawer { width: min(560px, 100%); display: flex; flex-direction: column; }
+.searchControls { display: grid; grid-template-columns: minmax(0, 1fr) 155px; gap: 10px; padding: 20px 0 14px; }
+.searchControls label { display: grid; gap: 7px; color: var(--text-secondary); font-size: 11px; font-weight: 700; }
+.searchControls input, .searchControls select { width: 100%; height: 40px; border: 1px solid var(--border-strong); border-radius: 8px; padding: 0 10px; background: white; color: var(--text-primary); font-size: 13px; font-weight: 400; }
+.searchSummary { min-height: 34px; display: flex; align-items: center; justify-content: space-between; color: var(--text-muted); font-size: 11px; border-bottom: 1px solid var(--border); }
+.searchSummary button { border: 0; background: transparent; color: var(--accent); cursor: pointer; font-size: 11px; font-weight: 700; }
+.searchResults { min-height: 0; overflow: auto; display: grid; align-content: start; }
+.searchResult { width: 100%; min-height: 76px; display: grid; grid-template-columns: 9px minmax(0, 1fr) auto; gap: 11px; align-items: center; border: 0; border-bottom: 1px solid var(--border); background: transparent; padding: 12px 4px; text-align: left; cursor: pointer; }
+.searchResult:hover { background: var(--surface-secondary); }
+.searchResultDot { width: 8px; height: 8px; border-radius: 50%; }
+.searchResultMain { display: grid; gap: 4px; min-width: 0; }
+.searchResultMain strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.searchResultMain small, .searchResultMain > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); font-size: 10px; }
+.searchResultMeta { display: grid; justify-items: end; gap: 5px; color: var(--text-muted); font-size: 10px; }
+.emptySearch { min-height: 180px; display: grid; place-content: center; justify-items: center; gap: 6px; color: var(--text-secondary); }
+.emptySearch strong { font-family: Georgia, "Times New Roman", serif; font-size: 18px; font-weight: 500; }
+.emptySearch span { color: var(--text-muted); font-size: 11px; }
 .toast { position: fixed; right: 22px; bottom: 22px; z-index: 80; background: #30342f; color: white; border-radius: 8px; padding: 11px 15px; font-size: 12px; box-shadow: var(--shadow-panel); animation: toastIn 160ms ease-out; }
 @keyframes toastIn { from { opacity: 0; transform: translateY(6px); } }
 
@@ -191,6 +208,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .mobileBottomNav .mobileAdd { color: var(--accent); font-weight: 700; }
   .mobileBottomNav .mobileAdd svg { background: var(--accent); color: white; border-radius: 9px; width: 34px; height: 30px; padding: 7px; }
   .eventDrawer { width: 100%; padding: 22px 20px calc(24px + env(safe-area-inset-bottom)); }
+  .searchControls { grid-template-columns: 1fr; }
+  .searchResult { grid-template-columns: 9px minmax(0, 1fr); }
+  .searchResultMeta { display: none; }
   .toast { right: 12px; left: 12px; bottom: calc(78px + env(safe-area-inset-bottom)); text-align: center; }
 }
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventDrawer } from "./EventDrawer";
+import { SearchDrawer } from "./SearchDrawer";
 import { ScopeDialog, type RecurrenceScope } from "./ScopeDialog";
 import { SettingsDrawer } from "./SettingsDrawer";
 import { addMonths, buildMonthGrid, longDateLabel, monthLabel, toDateKey } from "./dates";
@@ -35,6 +36,7 @@ export function MonthlaneApp() {
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent>();
   const [scopeRequest, setScopeRequest] = useState<{ action: "edit" | "delete"; draft?: EventDraft }>();
@@ -63,6 +65,13 @@ export function MonthlaneApp() {
     toastTimer.current = window.setTimeout(() => setToast(""), 2600);
   };
 
+  const goToToday = useCallback(() => {
+    setVisibleMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+    setSelectedDate(toDateKey(today));
+    setSearchOpen(false);
+    notify("Showing today.");
+  }, [today]);
+
   const openCreate = useCallback((date = selectedDate) => {
     setSelectedDate(date);
     setEditingEvent(undefined);
@@ -74,16 +83,18 @@ export function MonthlaneApp() {
       const target = event.target as HTMLElement;
       if (target.matches("input, textarea, select") || target.isContentEditable) return;
       if (event.key.toLowerCase() === "n") openCreate();
-      if (event.key.toLowerCase() === "t") {
-        setVisibleMonth(new Date(today.getFullYear(), today.getMonth(), 1));
-        setSelectedDate(toDateKey(today));
+      if (event.key.toLowerCase() === "t") goToToday();
+      if (event.key === "Escape") {
+        setSearchOpen(false);
+        setSettingsOpen(false);
+        setDrawerOpen(false);
       }
       if (event.key === "ArrowLeft") setVisibleMonth((month) => addMonths(month, -1));
       if (event.key === "ArrowRight") setVisibleMonth((month) => addMonths(month, 1));
     };
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, [openCreate, today]);
+  }, [goToToday, openCreate]);
 
   const days = useMemo(() => buildMonthGrid(visibleMonth), [visibleMonth]);
   const expandedEvents = useMemo(
@@ -93,6 +104,19 @@ export function MonthlaneApp() {
   const visibleEvents = useMemo(
     () => expandedEvents.filter((event) => !hiddenCategories.has(event.categoryId)),
     [expandedEvents, hiddenCategories],
+  );
+  const searchableEvents = useMemo(
+    () => [
+      ...events,
+      ...exceptions
+        .filter((exception) => exception.type === "modified" && exception.replacement)
+        .map((exception) => ({
+          ...exception.replacement!,
+          recurrenceParentId: exception.seriesId,
+          recurrenceInstanceDate: exception.instanceDate,
+        })),
+    ],
+    [events, exceptions],
   );
   const eventsByDate = useMemo(() => {
     const result = new Map<string, CalendarEvent[]>();
@@ -243,13 +267,10 @@ export function MonthlaneApp() {
           <button className="iconButton" onClick={() => setVisibleMonth((month) => addMonths(month, -1))} aria-label="Previous month" title="Previous month"><ChevronLeft /></button>
           <h1>{monthLabel(visibleMonth)}</h1>
           <button className="iconButton" onClick={() => setVisibleMonth((month) => addMonths(month, 1))} aria-label="Next month" title="Next month"><ChevronRight /></button>
-          <button className="secondaryButton todayButton" onClick={() => {
-            setVisibleMonth(new Date(today.getFullYear(), today.getMonth(), 1));
-            setSelectedDate(toDateKey(today));
-          }}>Today</button>
+          <button className="secondaryButton todayButton" onClick={goToToday}>Today</button>
         </div>
         <div className="topActions">
-          <button className="iconButton" aria-label="Search events" title="Search (coming in Phase 3)"><Search /></button>
+          <button className="iconButton" onClick={() => setSearchOpen(true)} aria-label="Search events" title="Search events"><Search /></button>
           <button className="primaryButton newEventButton" onClick={() => openCreate()}><Plus /><span>New event</span></button>
           <button className="iconButton" onClick={() => setSettingsOpen(true)} aria-label="Open settings" title="Settings"><Settings /></button>
         </div>
@@ -369,14 +390,20 @@ export function MonthlaneApp() {
       </div>
 
       <nav className="mobileBottomNav" aria-label="Primary navigation">
-        <button onClick={() => { setVisibleMonth(new Date(today.getFullYear(), today.getMonth(), 1)); setSelectedDate(toDateKey(today)); }}><CalendarIcon /><span>Today</span></button>
-        <button><Search /><span>Search</span></button>
+        <button onClick={goToToday}><CalendarIcon /><span>Today</span></button>
+        <button onClick={() => setSearchOpen(true)}><Search /><span>Search</span></button>
         <button className="mobileAdd" onClick={() => openCreate()}><Plus /><span>Add</span></button>
         <button onClick={() => setSidebarOpen(true)}><Sliders /><span>Calendars</span></button>
         <button onClick={() => setSettingsOpen(true)}><Settings /><span>Settings</span></button>
       </nav>
 
       <EventDrawer open={drawerOpen} date={selectedDate} event={editingEvent} categories={categories} onClose={() => setDrawerOpen(false)} onSave={saveDraft} onDelete={editingEvent ? removeEvent : undefined} />
+      <SearchDrawer open={searchOpen} events={searchableEvents} categories={categories} onClose={() => setSearchOpen(false)} onSelect={(event) => {
+        setSelectedDate(event.startDate);
+        setVisibleMonth(new Date(Number(event.startDate.slice(0, 4)), Number(event.startDate.slice(5, 7)) - 1, 1));
+        setSearchOpen(false);
+        notify(`Showing ${event.title}.`);
+      }} />
       <ScopeDialog open={Boolean(scopeRequest)} action={scopeRequest?.action ?? "edit"} onChoose={(scope) => void chooseScope(scope)} onClose={() => setScopeRequest(undefined)} />
       <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} onChanged={refresh} notify={notify} />
       {toast && <div className="toast" role="status">{toast}</div>}
