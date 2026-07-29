@@ -10,8 +10,10 @@ import { ensureCategories, listCategories, listEvents, listExceptions, saveEvent
 import { getDeviceId } from "./device";
 import { FlowNavigation } from "./flow/FlowNavigation";
 import { FlowWorkspace, type FlowView } from "./flow/FlowWorkspace";
+import { DayPanel } from "./flow/DayPanel";
 import { QuickCapture } from "./flow/QuickCapture";
 import { TaskEditorDrawer } from "./flow/TaskEditorDrawer";
+import { groupCalendarEntries } from "./flow/calendarEntries";
 import { inboxTasks, thisWeekTasks, todayTasks } from "./flow/taskFilters";
 import { taskRepository } from "./flow/taskRepository";
 import { CalendarIcon, ChevronLeft, ChevronRight, Menu, Plus, Search, Settings, Sliders } from "./icons";
@@ -39,6 +41,7 @@ export function MonthlaneApp() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
+  const [dayPanelOpen, setDayPanelOpen] = useState(false);
   const [captureDefaults, setCaptureDefaults] = useState<Omit<CreateTaskInput, "title">>({ bucket: "inbox" });
   const [editingTask, setEditingTask] = useState<FlowTask>();
   const [editingEvent, setEditingEvent] = useState<CalendarEvent>();
@@ -78,6 +81,7 @@ export function MonthlaneApp() {
     setVisibleMonth(new Date(today.getFullYear(), today.getMonth(), 1));
     setSelectedDate(toDateKey(today));
     setSearchOpen(false);
+    setDayPanelOpen(true);
     notify("Showing today.");
   }, [today]);
 
@@ -126,6 +130,19 @@ export function MonthlaneApp() {
     () => expandedEvents.filter((event) => !hiddenCategories.has(event.categoryId)),
     [expandedEvents, hiddenCategories],
   );
+  const visibleScheduledTasks = useMemo(
+    () => tasks.filter((task) =>
+      task.scheduledDate &&
+      task.status !== "archived" &&
+      !task.deletedAt &&
+      (!task.categoryId || !hiddenCategories.has(task.categoryId)),
+    ),
+    [hiddenCategories, tasks],
+  );
+  const entriesByDate = useMemo(
+    () => groupCalendarEntries(visibleEvents, visibleScheduledTasks),
+    [visibleEvents, visibleScheduledTasks],
+  );
   const searchableEvents = useMemo(
     () => [
       ...events,
@@ -150,6 +167,8 @@ export function MonthlaneApp() {
     return result;
   }, [visibleEvents]);
   const selectedEvents = eventsByDate.get(selectedDate) ?? [];
+  const selectedEntries = entriesByDate.get(selectedDate) ?? [];
+  const selectedTasks = selectedEntries.filter((entry) => entry.type === "task").map((entry) => entry.task);
 
   const eventFromDraft = (draft: EventDraft, existing?: CalendarEvent): CalendarEvent => {
     const now = new Date().toISOString();
@@ -276,6 +295,11 @@ export function MonthlaneApp() {
 
   const categoryById = (id: string) => categories.find((category) => category.id === id);
   const todayKey = toDateKey(today);
+  const todayExpandedEvents = useMemo(
+    () => expandEvents(events, exceptions, todayKey, todayKey)
+      .filter((event) => !hiddenCategories.has(event.categoryId)),
+    [events, exceptions, hiddenCategories, todayKey],
+  );
   const flowCounts = {
     inbox: inboxTasks(tasks).length,
     thisWeek: thisWeekTasks(tasks).length,
@@ -384,7 +408,7 @@ export function MonthlaneApp() {
                     }} />
                     <span className="categoryDot" style={{ background: category.color }} />
                     <span>{category.name}</span>
-                    <small>{events.filter((event) => event.categoryId === category.id).length}</small>
+                    <small>{events.filter((event) => event.categoryId === category.id).length + tasks.filter((task) => task.categoryId === category.id && !task.deletedAt && task.status !== "archived").length}</small>
                   </label>
                 );
               })}
@@ -404,7 +428,7 @@ export function MonthlaneApp() {
           <div className="calendarGrid">
             {days.map((date) => {
               const key = toDateKey(date);
-              const dayEvents = eventsByDate.get(key) ?? [];
+              const dayEntries = entriesByDate.get(key) ?? [];
               const isToday = key === toDateKey(today);
               const selected = key === selectedDate;
               const outside = date.getMonth() !== visibleMonth.getMonth();
@@ -414,37 +438,49 @@ export function MonthlaneApp() {
                   key={key}
                   role="button"
                   tabIndex={0}
-                  aria-label={`${longDateLabel(date)}, ${dayEvents.length} ${dayEvents.length === 1 ? "event" : "events"}`}
-                  onClick={() => setSelectedDate(key)}
+                  aria-label={`${longDateLabel(date)}, ${dayEntries.length} ${dayEntries.length === 1 ? "item" : "items"}`}
+                  onClick={() => { setSelectedDate(key); setDayPanelOpen(true); }}
                   onDoubleClick={() => openCreate(key)}
                   onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") setSelectedDate(key);
+                    if (event.key === "Enter" || event.key === " ") { setSelectedDate(key); setDayPanelOpen(true); }
                     if (event.key === "n") openCreate(key);
                   }}
                 >
                   <div className="dayNumberRow">
                     <span className={isToday ? "todayNumber" : ""}>{date.getDate()}</span>
-                    {dayEvents.length > 0 && <span className="mobileEventCount">{dayEvents.length}</span>}
+                    {dayEntries.length > 0 && <span className="mobileEventCount">{dayEntries.length}</span>}
                   </div>
                   <div className="dayEvents">
-                    {dayEvents.slice(0, 3).map((event) => {
-                      const category = categoryById(event.categoryId);
+                    {dayEntries.slice(0, 3).map((entry) => {
+                      if (entry.type === "event") {
+                        const category = categoryById(entry.event.categoryId);
+                        return (
+                          <button className="eventItem" key={entry.id} title={entry.event.title} onClick={(clickEvent) => {
+                            clickEvent.stopPropagation();
+                            selectEvent(entry.event);
+                          }}>
+                            <span className="eventAccent" style={{ background: category?.color }} />
+                            {!entry.event.allDay && <time>{entry.event.startTime}</time>}
+                            <span className="eventTitle">{entry.event.title}</span>
+                            {entry.event.recurrenceParentId && <span className="repeatMark" title="Repeating event">↻</span>}
+                          </button>
+                        );
+                      }
                       return (
-                        <button className="eventItem" key={event.id} title={event.title} onClick={(clickEvent) => {
+                        <button className={`calendarTaskItem ${entry.task.status === "completed" ? "completed" : ""}`} key={entry.id} title={entry.task.title} onClick={(clickEvent) => {
                           clickEvent.stopPropagation();
-                          selectEvent(event);
+                          setEditingTask(entry.task);
                         }}>
-                          <span className="eventAccent" style={{ background: category?.color }} />
-                          {!event.allDay && <time>{event.startTime}</time>}
-                          <span className="eventTitle">{event.title}</span>
-                          {event.recurrenceParentId && <span className="repeatMark" title="Repeating event">↻</span>}
+                          <span className="calendarTaskCheck">{entry.task.status === "completed" ? "✓" : ""}</span>
+                          {entry.task.scheduledTime && <time>{entry.task.scheduledTime}</time>}
+                          <span>{entry.task.title}</span>
                         </button>
                       );
                     })}
-                    {dayEvents.length > 3 && <button className="moreEvents" onClick={() => setSelectedDate(key)}>+{dayEvents.length - 3} more</button>}
+                    {dayEntries.length > 3 && <button className="moreEvents" onClick={() => { setSelectedDate(key); setDayPanelOpen(true); }}>+{dayEntries.length - 3} more</button>}
                   </div>
                   <div className="mobileDots" aria-hidden="true">
-                    {dayEvents.slice(0, 3).map((event) => <span key={event.id} style={{ background: categoryById(event.categoryId)?.color }} />)}
+                    {dayEntries.slice(0, 3).map((entry) => <span key={entry.id} style={{ background: categoryById(entry.type === "event" ? entry.event.categoryId : entry.task.categoryId ?? "")?.color ?? "var(--accent)" }} />)}
                   </div>
                 </div>
               );
@@ -456,25 +492,48 @@ export function MonthlaneApp() {
               <div><p className="eyebrow">Selected day</p><h2>{longDateLabel(new Date(`${selectedDate}T12:00:00`))}</h2></div>
               <button className="iconButton" onClick={() => openCreate(selectedDate)} aria-label="Add event on selected day"><Plus /></button>
             </div>
-            {selectedEvents.length ? selectedEvents.map((event) => (
-              <button className="mobileEventRow" key={event.id} onClick={() => selectEvent(event)}>
-                <span className="categoryDot" style={{ background: categoryById(event.categoryId)?.color }} />
-                <span><strong>{event.title}</strong><small>{event.allDay ? "All day" : event.startTime}</small></span>
+            {selectedEntries.length ? selectedEntries.map((entry) => entry.type === "event" ? (
+              <button className="mobileEventRow" key={entry.id} onClick={() => selectEvent(entry.event)}>
+                <span className="categoryDot" style={{ background: categoryById(entry.event.categoryId)?.color }} />
+                <span><strong>{entry.event.title}</strong><small>{entry.event.allDay ? "Event · All day" : `Event · ${entry.event.startTime}`}</small></span>
+                <ChevronRight />
+              </button>
+            ) : (
+              <button className={`mobileEventRow ${entry.task.status === "completed" ? "completed" : ""}`} key={entry.id} onClick={() => setEditingTask(entry.task)}>
+                <span className="mobileTaskCheck">{entry.task.status === "completed" ? "✓" : ""}</span>
+                <span><strong>{entry.task.title}</strong><small>{entry.task.scheduledTime ? `Task · ${entry.task.scheduledTime}` : "Task · No time"}</small></span>
                 <ChevronRight />
               </button>
             )) : <p className="clearDay">Nothing planned. Leave it open, or add a moment.</p>}
           </section>
+          <DayPanel
+            open={dayPanelOpen}
+            date={selectedDate}
+            events={selectedEvents}
+            tasks={selectedTasks}
+            categories={categories}
+            onClose={() => setDayPanelOpen(false)}
+            onAddEvent={() => openCreate(selectedDate)}
+            onAddTask={() => openCapture({ bucket: "thisWeek", scheduledDate: selectedDate })}
+            onOpenEvent={selectEvent}
+            onOpenTask={setEditingTask}
+            onCompleteTask={async (task) => { await taskRepository.completeTask(task.id); await refresh(); notify("Task completed."); }}
+            onReopenTask={async (task) => { await taskRepository.reopenTask(task.id); await refresh(); notify("Task reopened."); }}
+            onReturnToInbox={(task) => void moveTask(task, "inbox")}
+          />
         </section> : <FlowWorkspace
           view={activeView}
           tasks={tasks}
           categories={categories}
           today={todayKey}
+          todayEvents={todayExpandedEvents}
           onCapture={() => openCapture(activeView === "today"
             ? { bucket: "thisWeek", scheduledDate: todayKey }
             : activeView === "thisWeek"
               ? { bucket: "thisWeek" }
               : { bucket: "inbox" })}
           onEdit={setEditingTask}
+          onOpenEvent={selectEvent}
           onComplete={async (task) => { await taskRepository.completeTask(task.id); await refresh(); notify("Task completed."); }}
           onReopen={async (task) => { await taskRepository.reopenTask(task.id); await refresh(); notify("Task reopened."); }}
           onArchive={async (task) => { await taskRepository.archiveTask(task.id); await refresh(); notify("Task archived."); }}

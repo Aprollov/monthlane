@@ -2,7 +2,7 @@
 
 import { Plus } from "../icons";
 import { fromDateKey, toDateKey } from "../dates";
-import type { Category, FlowTask, TaskBucket } from "../types";
+import type { CalendarEvent, Category, FlowTask, TaskBucket } from "../types";
 import {
   completedTasks,
   inboxTasks,
@@ -15,6 +15,7 @@ import {
   unfinishedTasks,
 } from "./taskFilters";
 import { TaskList } from "./TaskList";
+import { sortCalendarEntries } from "./calendarEntries";
 
 export type FlowView = "month" | "inbox" | "thisWeek" | "today" | "completed";
 
@@ -23,8 +24,10 @@ type Props = {
   tasks: FlowTask[];
   categories: Category[];
   today: string;
+  todayEvents: CalendarEvent[];
   onCapture: () => void;
   onEdit: (task: FlowTask) => void;
+  onOpenEvent: (event: CalendarEvent) => void;
   onComplete: (task: FlowTask) => void;
   onReopen: (task: FlowTask) => void;
   onArchive: (task: FlowTask) => void;
@@ -64,8 +67,10 @@ export function FlowWorkspace({
   tasks,
   categories,
   today,
+  todayEvents,
   onCapture,
   onEdit,
+  onOpenEvent,
   onComplete,
   onReopen,
   onArchive,
@@ -101,6 +106,12 @@ export function FlowWorkspace({
       return !date || date < weekStartKey;
     }) },
   ].filter((group) => group.tasks.length) : [];
+  const orderedTodayEvents = sortCalendarEntries(todayEvents.map((event) => ({
+    type: "event" as const,
+    id: `event:${event.id}`,
+    date: event.startDate,
+    event,
+  }))).map((entry) => entry.type === "event" ? entry.event : null).filter((event): event is CalendarEvent => Boolean(event));
 
   const taskListProps = {
     categories,
@@ -129,6 +140,22 @@ export function FlowWorkspace({
           <div><span style={{ width: `${(weekCompleted / weekAll.length) * 100}%` }} /></div>
           <small>{weekCompleted} of {weekAll.length} completed</small>
         </div>
+      )}
+
+      {view === "today" && (
+        <section className="flowSection todaySchedule">
+          <h2>Schedule</h2>
+          {orderedTodayEvents.length ? (
+            <div className="todayEventList">
+              {orderedTodayEvents.map((event) => (
+                <button className="todayEventRow" key={event.id} onClick={() => onOpenEvent(event)}>
+                  <time>{event.allDay ? "All day" : event.startTime}</time>
+                  <strong>{event.title}</strong>
+                </button>
+              ))}
+            </div>
+          ) : <p className="dayPanelEmpty">No events today.</p>}
+        </section>
       )}
 
       <section className="flowSection">
