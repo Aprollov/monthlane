@@ -1,3 +1,14 @@
+export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
+
+export type RecurrenceRule = {
+  frequency: RecurrenceFrequency;
+  interval: number;
+  daysOfWeek?: number[];
+  endType: "never" | "date" | "count";
+  endDate?: string;
+  count?: number;
+};
+
 export type CalendarEvent = {
   id: string;
   title: string;
@@ -10,9 +21,23 @@ export type CalendarEvent = {
   categoryId: string;
   tags: string[];
   reminderMinutes: number[];
+  recurrence?: RecurrenceRule;
+  recurrenceParentId?: string;
+  recurrenceInstanceDate?: string;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
+  deviceId: string;
+};
+
+export type RecurrenceException = {
+  id: string;
+  seriesId: string;
+  instanceDate: string;
+  type: "modified" | "deleted";
+  replacement?: CalendarEvent;
+  createdAt: string;
+  updatedAt: string;
   deviceId: string;
 };
 
@@ -29,7 +54,7 @@ export type Category = {
 
 export type EventDraft = Pick<
   CalendarEvent,
-  "title" | "startDate" | "allDay" | "startTime" | "endTime" | "notes" | "categoryId"
+  "title" | "startDate" | "allDay" | "startTime" | "endTime" | "notes" | "categoryId" | "recurrence"
 >;
 
 export const defaultCategories: Category[] = [

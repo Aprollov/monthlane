@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventDrawer } from "./EventDrawer";
+import { ScopeDialog, type RecurrenceScope } from "./ScopeDialog";
 import { addMonths, buildMonthGrid, longDateLabel, monthLabel, toDateKey } from "./dates";
-import { ensureCategories, listCategories, listEvents, saveEvent, softDeleteEvent } from "./database";
+import { ensureCategories, listCategories, listEvents, listExceptions, saveEvent, saveException, softDeleteEvent } from "./database";
 import { CalendarIcon, ChevronLeft, ChevronRight, Menu, Plus, Search, Settings, Sliders } from "./icons";
-import type { CalendarEvent, Category, EventDraft } from "./types";
+import { expandEvents, previousDateKey } from "./recurrence";
+import type { CalendarEvent, Category, EventDraft, RecurrenceException } from "./types";
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -23,6 +25,7 @@ export function MonthlaneApp() {
   const [visibleMonth, setVisibleMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(() => toDateKey(today));
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [exceptions, setExceptions] = useState<RecurrenceException[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
@@ -32,14 +35,16 @@ export function MonthlaneApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent>();
+  const [scopeRequest, setScopeRequest] = useState<{ action: "edit" | "delete"; draft?: EventDraft }>();
   const [toast, setToast] = useState("");
   const toastTimer = useRef<number | undefined>(undefined);
 
   const refresh = useCallback(async () => {
     await ensureCategories();
-    const [storedEvents, storedCategories] = await Promise.all([listEvents(), listCategories()]);
+    const [storedEvents, storedCategories, storedExceptions] = await Promise.all([listEvents(), listCategories(), listExceptions()]);
     setEvents(storedEvents);
     setCategories(storedCategories);
+    setExceptions(storedExceptions);
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
@@ -78,9 +83,14 @@ export function MonthlaneApp() {
     return () => window.removeEventListener("keydown", handleShortcut);
   }, [openCreate, today]);
 
+  const days = useMemo(() => buildMonthGrid(visibleMonth), [visibleMonth]);
+  const expandedEvents = useMemo(
+    () => expandEvents(events, exceptions, toDateKey(days[0]), toDateKey(days[days.length - 1])),
+    [days, events, exceptions],
+  );
   const visibleEvents = useMemo(
-    () => events.filter((event) => !hiddenCategories.has(event.categoryId)),
-    [events, hiddenCategories],
+    () => expandedEvents.filter((event) => !hiddenCategories.has(event.categoryId)),
+    [expandedEvents, hiddenCategories],
   );
   const eventsByDate = useMemo(() => {
     const result = new Map<string, CalendarEvent[]>();
@@ -92,13 +102,12 @@ export function MonthlaneApp() {
     for (const group of result.values()) group.sort((a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? ""));
     return result;
   }, [visibleEvents]);
-  const days = useMemo(() => buildMonthGrid(visibleMonth), [visibleMonth]);
   const selectedEvents = eventsByDate.get(selectedDate) ?? [];
 
-  const saveDraft = async (draft: EventDraft) => {
+  const eventFromDraft = (draft: EventDraft, existing?: CalendarEvent): CalendarEvent => {
     const now = new Date().toISOString();
-    const event: CalendarEvent = {
-      id: editingEvent?.id ?? crypto.randomUUID(),
+    return {
+      id: existing?.id ?? crypto.randomUUID(),
       title: draft.title,
       startDate: draft.startDate,
       allDay: draft.allDay,
@@ -106,26 +115,110 @@ export function MonthlaneApp() {
       endTime: draft.allDay ? undefined : draft.endTime,
       notes: draft.notes,
       categoryId: draft.categoryId,
-      tags: editingEvent?.tags ?? [],
-      reminderMinutes: editingEvent?.reminderMinutes ?? [],
-      createdAt: editingEvent?.createdAt ?? now,
+      tags: existing?.tags ?? [],
+      reminderMinutes: existing?.reminderMinutes ?? [],
+      recurrence: draft.recurrence,
+      createdAt: existing?.createdAt ?? now,
       updatedAt: now,
-      deviceId: editingEvent?.deviceId ?? deviceId(),
+      deviceId: existing?.deviceId ?? deviceId(),
     };
+  };
+
+  const finishSave = async (event: CalendarEvent, message: string) => {
     await saveEvent(event);
     await refresh();
     setSelectedDate(event.startDate);
     setVisibleMonth(new Date(Number(event.startDate.slice(0, 4)), Number(event.startDate.slice(5, 7)) - 1, 1));
     setDrawerOpen(false);
-    notify(editingEvent ? "Event updated." : "Event saved.");
+    setScopeRequest(undefined);
+    notify(message);
+  };
+
+  const saveDraft = async (draft: EventDraft) => {
+    if (editingEvent?.recurrenceParentId) {
+      setScopeRequest({ action: "edit", draft });
+      return;
+    }
+    const event = eventFromDraft(draft, editingEvent);
+    await finishSave(event, editingEvent ? "Event updated." : draft.recurrence ? "Repeating event saved." : "Event saved.");
   };
 
   const removeEvent = async () => {
     if (!editingEvent) return;
+    if (editingEvent.recurrenceParentId) {
+      setScopeRequest({ action: "delete" });
+      return;
+    }
     await softDeleteEvent(editingEvent);
     await refresh();
     setDrawerOpen(false);
     notify("Event deleted.");
+  };
+
+  const chooseScope = async (scope: RecurrenceScope) => {
+    if (!editingEvent?.recurrenceParentId || !editingEvent.recurrenceInstanceDate) return;
+    const series = events.find((event) => event.id === editingEvent.recurrenceParentId);
+    if (!series) return;
+    const instanceDate = editingEvent.recurrenceInstanceDate;
+    const now = new Date().toISOString();
+
+    if (scopeRequest?.action === "delete") {
+      if (scope === "single") {
+        await saveException({
+          id: `${series.id}:${instanceDate}`,
+          seriesId: series.id,
+          instanceDate,
+          type: "deleted",
+          createdAt: now,
+          updatedAt: now,
+          deviceId: deviceId(),
+        });
+      } else if (scope === "following") {
+        await saveEvent({
+          ...series,
+          recurrence: { ...series.recurrence!, endType: "date", endDate: previousDateKey(instanceDate) },
+          updatedAt: now,
+        });
+      } else {
+        await softDeleteEvent(series);
+      }
+      await refresh();
+      setScopeRequest(undefined);
+      setDrawerOpen(false);
+      notify(scope === "single" ? "This event was removed." : scope === "following" ? "This and following events were removed." : "Series deleted.");
+      return;
+    }
+
+    const draft = scopeRequest?.draft;
+    if (!draft) return;
+    if (scope === "single") {
+      const replacement = eventFromDraft({ ...draft, recurrence: undefined });
+      await saveException({
+        id: `${series.id}:${instanceDate}`,
+        seriesId: series.id,
+        instanceDate,
+        type: "modified",
+        replacement,
+        createdAt: now,
+        updatedAt: now,
+        deviceId: deviceId(),
+      });
+      await refresh();
+      setScopeRequest(undefined);
+      setDrawerOpen(false);
+      notify("Only this event was updated.");
+    } else if (scope === "following") {
+      await saveEvent({
+        ...series,
+        recurrence: { ...series.recurrence!, endType: "date", endDate: previousDateKey(instanceDate) },
+        updatedAt: now,
+      });
+      const newSeries = eventFromDraft({ ...draft, startDate: instanceDate });
+      await finishSave(newSeries, "A new repeating series was created.");
+    } else {
+      const updatedSeries = eventFromDraft({ ...draft, startDate: series.startDate }, series);
+      await finishSave(updatedSeries, "The entire series was updated.");
+    }
   };
 
   const selectEvent = (event: CalendarEvent) => {
@@ -242,7 +335,8 @@ export function MonthlaneApp() {
                         }}>
                           <span className="eventAccent" style={{ background: category?.color }} />
                           {!event.allDay && <time>{event.startTime}</time>}
-                          <span>{event.title}</span>
+                          <span className="eventTitle">{event.title}</span>
+                          {event.recurrenceParentId && <span className="repeatMark" title="Repeating event">↻</span>}
                         </button>
                       );
                     })}
@@ -281,6 +375,7 @@ export function MonthlaneApp() {
       </nav>
 
       <EventDrawer open={drawerOpen} date={selectedDate} event={editingEvent} categories={categories} onClose={() => setDrawerOpen(false)} onSave={saveDraft} onDelete={editingEvent ? removeEvent : undefined} />
+      <ScopeDialog open={Boolean(scopeRequest)} action={scopeRequest?.action ?? "edit"} onChoose={(scope) => void chooseScope(scope)} onClose={() => setScopeRequest(undefined)} />
       {toast && <div className="toast" role="status">{toast}</div>}
     </main>
   );

@@ -1,4 +1,4 @@
-import { defaultCategories, type CalendarEvent, type Category } from "./types";
+import { defaultCategories, type CalendarEvent, type Category, type RecurrenceException } from "./types";
 
 const DB_NAME = "monthlane";
 const DB_VERSION = 1;
@@ -74,10 +74,27 @@ export const listCategories = async () => {
   return categories.filter((category) => !category.deletedAt);
 };
 
+export const listExceptions = async () => {
+  const db = await openMonthlaneDb();
+  const exceptions = await requestValue<RecurrenceException[]>(
+    db.transaction("recurrenceExceptions").objectStore("recurrenceExceptions").getAll(),
+  );
+  db.close();
+  return exceptions;
+};
+
 export const saveEvent = async (event: CalendarEvent) => {
   const db = await openMonthlaneDb();
   const tx = db.transaction("events", "readwrite");
   tx.objectStore("events").put(event);
+  await transactionDone(tx);
+  db.close();
+};
+
+export const saveException = async (exception: RecurrenceException) => {
+  const db = await openMonthlaneDb();
+  const tx = db.transaction("recurrenceExceptions", "readwrite");
+  tx.objectStore("recurrenceExceptions").put(exception);
   await transactionDone(tx);
   db.close();
 };
