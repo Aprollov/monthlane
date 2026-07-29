@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventDrawer } from "./EventDrawer";
 import { ScopeDialog, type RecurrenceScope } from "./ScopeDialog";
+import { SettingsDrawer } from "./SettingsDrawer";
 import { addMonths, buildMonthGrid, longDateLabel, monthLabel, toDateKey } from "./dates";
 import { ensureCategories, listCategories, listEvents, listExceptions, saveEvent, saveException, softDeleteEvent } from "./database";
 import { CalendarIcon, ChevronLeft, ChevronRight, Menu, Plus, Search, Settings, Sliders } from "./icons";
@@ -34,6 +35,7 @@ export function MonthlaneApp() {
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent>();
   const [scopeRequest, setScopeRequest] = useState<{ action: "edit" | "delete"; draft?: EventDraft }>();
   const [toast, setToast] = useState("");
@@ -249,7 +251,7 @@ export function MonthlaneApp() {
         <div className="topActions">
           <button className="iconButton" aria-label="Search events" title="Search (coming in Phase 3)"><Search /></button>
           <button className="primaryButton newEventButton" onClick={() => openCreate()}><Plus /><span>New event</span></button>
-          <button className="iconButton" aria-label="Open settings" title="Settings"><Settings /></button>
+          <button className="iconButton" onClick={() => setSettingsOpen(true)} aria-label="Open settings" title="Settings"><Settings /></button>
         </div>
       </header>
 
@@ -371,11 +373,12 @@ export function MonthlaneApp() {
         <button><Search /><span>Search</span></button>
         <button className="mobileAdd" onClick={() => openCreate()}><Plus /><span>Add</span></button>
         <button onClick={() => setSidebarOpen(true)}><Sliders /><span>Calendars</span></button>
-        <button><Settings /><span>Settings</span></button>
+        <button onClick={() => setSettingsOpen(true)}><Settings /><span>Settings</span></button>
       </nav>
 
       <EventDrawer open={drawerOpen} date={selectedDate} event={editingEvent} categories={categories} onClose={() => setDrawerOpen(false)} onSave={saveDraft} onDelete={editingEvent ? removeEvent : undefined} />
       <ScopeDialog open={Boolean(scopeRequest)} action={scopeRequest?.action ?? "edit"} onChoose={(scope) => void chooseScope(scope)} onClose={() => setScopeRequest(undefined)} />
+      <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} onChanged={refresh} notify={notify} />
       {toast && <div className="toast" role="status">{toast}</div>}
     </main>
   );

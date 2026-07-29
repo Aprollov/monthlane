@@ -57,6 +57,14 @@ export type EventDraft = Pick<
   "title" | "startDate" | "allDay" | "startTime" | "endTime" | "notes" | "categoryId" | "recurrence"
 >;
 
+export type MonthlaneBackup = {
+  version: 1;
+  exportedAt: string;
+  events: CalendarEvent[];
+  categories: Category[];
+  exceptions: RecurrenceException[];
+};
+
 export const defaultCategories: Category[] = [
   ["work", "Work", "#6F8191"],
   ["personal", "Personal", "#8A7894"],

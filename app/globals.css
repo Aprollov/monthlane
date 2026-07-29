@@ -119,6 +119,27 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .scopeChoices button:hover { border-color: var(--accent); background: var(--accent-soft); }
 .scopeChoices strong { font-size: 13px; }
 .scopeChoices span { color: var(--text-muted); font-size: 11px; }
+.settingsDrawer { width: min(500px, 100%); }
+.settingsSection { padding: 24px 0; border-bottom: 1px solid var(--border); }
+.settingsSection:last-child { border-bottom: 0; }
+.settingsHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.settingsHeading h3 { margin: 0 0 5px; font-family: Georgia, "Times New Roman", serif; font-size: 19px; font-weight: 500; }
+.settingsHeading p, .settingsHint { margin: 0; color: var(--text-muted); font-size: 11px; line-height: 1.5; }
+.settingsActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.settingsHint { margin-top: 12px; }
+.settingsForm { display: grid; gap: 13px; }
+.settingsForm label { display: grid; gap: 7px; color: var(--text-secondary); font-size: 11px; font-weight: 700; }
+.settingsForm input { height: 40px; width: 100%; border: 1px solid var(--border-strong); border-radius: 8px; padding: 0 10px; background: white; color: var(--text-primary); font-size: 13px; font-weight: 400; }
+.settingsDivider { height: 1px; background: var(--border); margin: 4px 0; }
+.textButton { justify-self: start; border: 0; background: transparent; color: var(--accent); padding: 0; cursor: pointer; font-size: 11px; font-weight: 700; }
+.syncBadge { flex: 0 0 auto; border-radius: 999px; background: var(--surface-secondary); color: var(--text-muted); padding: 5px 9px; font-size: 10px; font-weight: 700; }
+.syncBadge.connected { background: var(--accent-soft); color: var(--accent); }
+.accountCard { display: grid; gap: 15px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-secondary); padding: 15px; }
+.accountCard > div:first-child { display: grid; gap: 4px; }
+.accountCard strong { font-size: 13px; }
+.accountCard span { color: var(--text-muted); font-size: 11px; }
+.settingsError { margin: 0; color: var(--danger); font-size: 11px; line-height: 1.5; }
+.visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .toast { position: fixed; right: 22px; bottom: 22px; z-index: 80; background: #30342f; color: white; border-radius: 8px; padding: 11px 15px; font-size: 12px; box-shadow: var(--shadow-panel); animation: toastIn 160ms ease-out; }
 @keyframes toastIn { from { opacity: 0; transform: translateY(6px); } }
 

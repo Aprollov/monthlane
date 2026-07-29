@@ -26,8 +26,39 @@ npm run build:pages
 ```
 
 Monthlane stores event data in the browser's IndexedDB database named
-`monthlane`. Clearing browser site data removes the local calendar, so backup
-and restore support will be added before cloud synchronization.
+`monthlane`. Settings provides JSON backup/restore and optional Supabase
+cloud synchronization. The app remains usable offline.
+
+## Supabase cloud sync
+
+Create a Supabase project, enable Email authentication, then run this SQL in
+the Supabase SQL editor:
+
+```sql
+create table public.monthlane_backups (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  payload jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.monthlane_backups enable row level security;
+
+create policy "Users can read their own calendar"
+on public.monthlane_backups for select
+using (auth.uid() = user_id);
+
+create policy "Users can insert their own calendar"
+on public.monthlane_backups for insert
+with check (auth.uid() = user_id);
+
+create policy "Users can update their own calendar"
+on public.monthlane_backups for update
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+```
+
+Copy the project URL and publishable anon key from Supabase into Monthlane's
+Settings panel. Never paste the Supabase service-role key into the browser.
 
 ## Keyboard shortcuts
 

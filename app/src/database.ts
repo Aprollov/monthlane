@@ -1,4 +1,10 @@
-import { defaultCategories, type CalendarEvent, type Category, type RecurrenceException } from "./types";
+import {
+  defaultCategories,
+  type CalendarEvent,
+  type Category,
+  type MonthlaneBackup,
+  type RecurrenceException,
+} from "./types.ts";
 
 const DB_NAME = "monthlane";
 const DB_VERSION = 1;
@@ -101,4 +107,53 @@ export const saveException = async (exception: RecurrenceException) => {
 
 export const softDeleteEvent = async (event: CalendarEvent) => {
   await saveEvent({ ...event, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+};
+
+export const exportBackup = async (): Promise<MonthlaneBackup> => {
+  const db = await openMonthlaneDb();
+  const tx = db.transaction(["events", "categories", "recurrenceExceptions"]);
+  const [events, categories, exceptions] = await Promise.all([
+    requestValue<CalendarEvent[]>(tx.objectStore("events").getAll()),
+    requestValue<Category[]>(tx.objectStore("categories").getAll()),
+    requestValue<RecurrenceException[]>(tx.objectStore("recurrenceExceptions").getAll()),
+  ]);
+  db.close();
+  return { version: 1, exportedAt: new Date().toISOString(), events, categories, exceptions };
+};
+
+const newerRecords = <T extends { id: string; updatedAt: string }>(local: T[], incoming: T[]) => {
+  const merged = new Map(local.map((record) => [record.id, record]));
+  for (const record of incoming) {
+    const existing = merged.get(record.id);
+    if (!existing || record.updatedAt > existing.updatedAt) merged.set(record.id, record);
+  }
+  return [...merged.values()];
+};
+
+export const mergeBackups = (local: MonthlaneBackup, incoming: MonthlaneBackup): MonthlaneBackup => ({
+  version: 1,
+  exportedAt: new Date().toISOString(),
+  events: newerRecords(local.events, incoming.events),
+  categories: newerRecords(local.categories, incoming.categories),
+  exceptions: newerRecords(local.exceptions, incoming.exceptions),
+});
+
+export const importBackup = async (backup: MonthlaneBackup) => {
+  if (
+    backup?.version !== 1 ||
+    !Array.isArray(backup.events) ||
+    !Array.isArray(backup.categories) ||
+    !Array.isArray(backup.exceptions)
+  ) throw new Error("This is not a valid Monthlane backup.");
+
+  const local = await exportBackup();
+  const merged = mergeBackups(local, backup);
+  const db = await openMonthlaneDb();
+  const tx = db.transaction(["events", "categories", "recurrenceExceptions"], "readwrite");
+  for (const event of merged.events) tx.objectStore("events").put(event);
+  for (const category of merged.categories) tx.objectStore("categories").put(category);
+  for (const exception of merged.exceptions) tx.objectStore("recurrenceExceptions").put(exception);
+  await transactionDone(tx);
+  db.close();
+  return merged;
 };
