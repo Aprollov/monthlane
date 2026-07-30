@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "../icons";
+import { CheckCircle, Plus } from "../icons";
 import { fromDateKey, toDateKey } from "../dates";
 import type { CalendarEvent, Category, FlowTask, TaskBucket } from "../types";
 import {
@@ -26,6 +26,7 @@ type Props = {
   today: string;
   todayEvents: CalendarEvent[];
   onCapture: () => void;
+  onWrapUp: () => void;
   onEdit: (task: FlowTask) => void;
   onOpenEvent: (event: CalendarEvent) => void;
   onComplete: (task: FlowTask) => void;
@@ -69,6 +70,7 @@ export function FlowWorkspace({
   today,
   todayEvents,
   onCapture,
+  onWrapUp,
   onEdit,
   onOpenEvent,
   onComplete,
@@ -132,7 +134,12 @@ export function FlowWorkspace({
           <h1>{copy.title}</h1>
           <p>{copy.description}</p>
         </div>
-        {view !== "completed" && <button className="primaryButton" onClick={onCapture}><Plus /> Add task</button>}
+        {view !== "completed" && (
+          <div className="flowHeaderActions">
+            {view === "today" && <button className="secondaryButton" onClick={onWrapUp}><CheckCircle /> Wrap up</button>}
+            <button className="primaryButton" onClick={onCapture}><Plus /> Add task</button>
+          </div>
+        )}
       </header>
 
       {view === "thisWeek" && weekAll.length > 0 && (
