@@ -41,7 +41,7 @@ export function QuickCapture({ open, defaults, onClose, onCreate }: Props) {
         <div className="captureInput">
           <label id="capture-title" htmlFor="quick-capture">Quick capture</label>
           <input ref={inputRef} id="quick-capture" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="What’s on your mind?" />
-          {findUrl(title) && <small>Link detected · save to Later Read</small>}
+          {findUrl(title) && <small>Link detected</small>}
         </div>
         <button className="primaryButton" disabled={busy || !title.trim()} type="submit">Add</button>
         <button className="iconButton" type="button" onClick={onClose} aria-label="Close quick capture"><X /></button>

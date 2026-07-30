@@ -13,7 +13,7 @@ type Props = {
   onComplete: (task: FlowTask) => void;
   onReopen: (task: FlowTask) => void;
   onArchive: (task: FlowTask) => void;
-  onMove: (task: FlowTask, bucket: TaskBucket, scheduledDate?: string) => void;
+  onMove: (task: FlowTask, bucket: TaskBucket) => void;
   onReorder: (ids: string[]) => void;
   today: string;
   reorderable?: boolean;
@@ -40,10 +40,6 @@ export function TaskList({
     [ids[index], ids[target]] = [ids[target], ids[index]];
     onReorder(ids);
   };
-  const tomorrowDate = fromDateKey(today);
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  const tomorrow = toDateKey(tomorrowDate);
-
   if (!tasks.length) return <p className="emptyTaskList">{emptyMessage}</p>;
   return (
     <div className="taskList">
@@ -100,15 +96,13 @@ export function TaskList({
                   <span className="visuallyHidden">Move {task.title}</span>
                   <select aria-label={`Move ${task.title}`} defaultValue="" onChange={(event) => {
                     const action = event.target.value;
-                    if (action === "today") onMove(task, "thisWeek", today);
-                    if (action === "tomorrow") onMove(task, "thisWeek", tomorrow);
+                    if (action === "today") onMove(task, "today");
                     if (action === "week") onMove(task, "thisWeek");
                     if (action === "inbox") onMove(task, "inbox");
                     event.target.value = "";
                   }}>
                     <option value="" disabled>Move…</option>
                     <option value="today">Today</option>
-                    <option value="tomorrow">Tomorrow</option>
                     <option value="week">This Week</option>
                     <option value="inbox">Inbox</option>
                   </select>

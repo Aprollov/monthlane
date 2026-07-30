@@ -15,12 +15,11 @@ import { QuickCapture } from "./flow/QuickCapture";
 import { TaskEditorDrawer } from "./flow/TaskEditorDrawer";
 import { WrapUpDialog } from "./flow/WrapUpDialog";
 import { groupCalendarEntries } from "./flow/calendarEntries";
-import { inboxTasks, laterReadTasks, thisWeekTasks, todayTasks } from "./flow/taskFilters";
 import { taskRepository } from "./flow/taskRepository";
 import { changesForWrapUpAction, summarizeWrapUp, wrapUpSummaryText, wrapUpTasks, type WrapUpPlanItem } from "./flow/wrapUp";
 import { CalendarIcon, ChevronLeft, ChevronRight, InboxIcon, Menu, Plus, Search, Settings, Sliders, Sun } from "./icons";
 import { expandEvents, previousDateKey } from "./recurrence";
-import type { CalendarEvent, Category, CreateTaskInput, EventDraft, FlowTask, RecurrenceException, TaskBucket, UpdateTaskInput } from "./types";
+import type { CalendarEvent, Category, CreateTaskInput, EventDraft, FlowBucket, FlowTask, RecurrenceException, TaskBucket, UpdateTaskInput } from "./types";
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -33,6 +32,7 @@ export function MonthlaneApp() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [tasks, setTasks] = useState<FlowTask[]>([]);
   const [activeView, setActiveView] = useState<FlowView>("month");
+  const [mobileFlowBucket, setMobileFlowBucket] = useState<FlowBucket>("today");
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
     try { return new Set(JSON.parse(localStorage.getItem("monthlane-hidden-calendars") ?? "[]")); }
@@ -310,12 +310,6 @@ export function MonthlaneApp() {
       .filter((event) => !hiddenCategories.has(event.categoryId)),
     [events, exceptions, hiddenCategories, todayKey],
   );
-  const flowCounts = {
-    inbox: inboxTasks(tasks).length,
-    thisWeek: thisWeekTasks(tasks).length,
-    today: todayTasks(tasks, todayKey).length,
-    laterRead: laterReadTasks(tasks).length,
-  };
   const wrapUpGroups = useMemo(() => wrapUpTasks(tasks, todayKey), [tasks, todayKey]);
 
   const selectView = (view: FlowView) => {
@@ -324,13 +318,7 @@ export function MonthlaneApp() {
   };
 
   const captureDefaultsForView = (view: FlowView): Omit<CreateTaskInput, "title"> =>
-    view === "today"
-      ? { bucket: "thisWeek", scheduledDate: todayKey }
-      : view === "thisWeek"
-        ? { bucket: "thisWeek" }
-        : view === "laterRead"
-          ? { bucket: "laterRead", kind: "readLater" }
-          : { bucket: "inbox" };
+    view === "flow" ? { bucket: mobileFlowBucket } : { bucket: "inbox" };
 
   const createTask = async (input: CreateTaskInput) => {
     await taskRepository.createTask(input);
@@ -351,14 +339,13 @@ export function MonthlaneApp() {
     notify("Task updated.");
   };
 
-  const moveTask = async (task: FlowTask, bucket: TaskBucket, scheduledDate?: string) => {
+  const moveTask = async (task: FlowTask, bucket: TaskBucket) => {
     await taskRepository.updateTask(task.id, {
       bucket,
-      scheduledDate: bucket === "inbox" ? undefined : scheduledDate ?? task.scheduledDate,
-      scheduledTime: bucket === "inbox" ? undefined : task.scheduledTime,
+      focusedAt: bucket === "today" && task.bucket !== "today" ? new Date().toISOString() : task.focusedAt,
     });
     await refresh();
-    notify(bucket === "inbox" ? "Returned to Inbox." : scheduledDate === todayKey ? "Moved to Today." : "Moved to This Week.");
+    notify(bucket === "inbox" ? "Moved to Inbox." : bucket === "today" ? "Moved to Today." : "Moved to This Week.");
   };
 
   const finishWrapUp = async (plan: WrapUpPlanItem[]) => {
@@ -423,7 +410,7 @@ export function MonthlaneApp() {
             <div className="sectionTitle"><span>Calendar</span></div>
             <button className={`sidebarNavButton ${activeView === "month" ? "active" : ""}`} onClick={() => selectView("month")}><CalendarIcon /><span>Month</span></button>
           </section>
-          <FlowNavigation activeView={activeView} counts={flowCounts} onSelect={selectView} />
+          <FlowNavigation activeView={activeView} onSelect={selectView} />
           <section className="sidebarSection">
             <div className="sectionTitle"><span>Calendars</span><Sliders /></div>
             <div className="categoryList">
@@ -568,23 +555,23 @@ export function MonthlaneApp() {
           tasks={tasks}
           categories={categories}
           today={todayKey}
-          todayEvents={todayExpandedEvents}
+          mobileBucket={mobileFlowBucket}
+          onMobileBucketChange={setMobileFlowBucket}
+          onCreate={createTask}
           onWrapUp={() => setWrapUpOpen(true)}
-          onCapture={() => openCapture(captureDefaultsForView(activeView))}
           onEdit={setEditingTask}
-          onOpenEvent={selectEvent}
           onComplete={async (task) => { await taskRepository.completeTask(task.id); await refresh(); notify("Task completed."); }}
           onReopen={async (task) => { await taskRepository.reopenTask(task.id); await refresh(); notify("Task reopened."); }}
           onArchive={async (task) => { await taskRepository.archiveTask(task.id); await refresh(); notify("Task archived."); }}
-          onMove={(task, bucket, scheduledDate) => void moveTask(task, bucket, scheduledDate)}
+          onMove={(task, bucket) => void moveTask(task, bucket)}
           onReorder={async (ids) => { await taskRepository.reorderTasks(ids); await refresh(); }}
         />}
       </div>
 
       <nav className="mobileBottomNav" aria-label="Primary navigation">
         <button className={activeView === "month" ? "active" : ""} aria-current={activeView === "month" ? "page" : undefined} onClick={() => selectView("month")}><CalendarIcon /><span>Month</span></button>
-        <button className={activeView === "today" ? "active" : ""} aria-current={activeView === "today" ? "page" : undefined} onClick={() => selectView("today")}><Sun /><span>Today</span></button>
-        <button className={activeView === "inbox" ? "active" : ""} aria-current={activeView === "inbox" ? "page" : undefined} onClick={() => selectView("inbox")}><InboxIcon /><span>Inbox</span></button>
+        <button className={activeView === "flow" && mobileFlowBucket === "today" ? "active" : ""} aria-current={activeView === "flow" && mobileFlowBucket === "today" ? "page" : undefined} onClick={() => { setMobileFlowBucket("today"); selectView("flow"); }}><Sun /><span>Today</span></button>
+        <button className={activeView === "flow" && mobileFlowBucket === "inbox" ? "active" : ""} aria-current={activeView === "flow" && mobileFlowBucket === "inbox" ? "page" : undefined} onClick={() => { setMobileFlowBucket("inbox"); selectView("flow"); }}><InboxIcon /><span>Inbox</span></button>
         <button className="mobileAdd" onClick={() => activeView === "month" ? openCreate() : openCapture(captureDefaultsForView(activeView))}><Plus /><span>Add</span></button>
         <button onClick={() => setSidebarOpen(true)}><Menu /><span>More</span></button>
       </nav>
@@ -602,7 +589,8 @@ export function MonthlaneApp() {
           setVisibleMonth(new Date(Number(task.scheduledDate.slice(0, 4)), Number(task.scheduledDate.slice(5, 7)) - 1, 1));
           setActiveView("month");
         } else {
-          setActiveView(task.kind === "readLater" ? "laterRead" : task.bucket === "thisWeek" ? "thisWeek" : "inbox");
+          setMobileFlowBucket(task.bucket === "today" || task.bucket === "thisWeek" ? task.bucket : "inbox");
+          setActiveView("flow");
         }
         setSearchOpen(false);
         setEditingTask(task);

@@ -14,11 +14,11 @@ test("extracts URLs without trailing prose punctuation", () => {
   assert.equal(findUrl("ordinary task"), undefined);
 });
 
-test("URL capture creates a Later Read task and keeps supplied title", () => {
+test("URL capture keeps the target bucket and extracts link metadata", () => {
   const input = captureInputFromText("A thoughtful video — https://youtu.be/abc", { bucket: "inbox" });
   assert.equal(input.title, "A thoughtful video");
-  assert.equal(input.kind, "readLater");
-  assert.equal(input.bucket, "laterRead");
+  assert.equal(input.kind, "task");
+  assert.equal(input.bucket, "inbox");
   assert.equal(input.siteName, "YouTube");
   assert.equal(input.url, "https://youtu.be/abc");
 });

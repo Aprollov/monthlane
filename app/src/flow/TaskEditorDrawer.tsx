@@ -5,6 +5,7 @@ import { X } from "../icons";
 import type { Category, FlowTask, TaskBucket, TaskStatus, UpdateTaskInput } from "../types";
 import { detectLinkSource } from "./urlDetection";
 import { useDialogFocus } from "../useDialogFocus";
+import { flowBucket } from "./taskFilters";
 
 type Props = {
   open: boolean;
@@ -25,7 +26,7 @@ export function TaskEditorDrawer({ open, task, categories, onClose, onSave, onDe
     setDraft({
       title: task.title,
       notes: task.notes,
-      bucket: task.bucket,
+      bucket: flowBucket(task),
       scheduledDate: task.scheduledDate,
       scheduledTime: task.scheduledTime,
       dueDate: task.dueDate,
@@ -75,8 +76,7 @@ export function TaskEditorDrawer({ open, task, categories, onClose, onSave, onDe
             <label>Bucket<select value={draft.bucket ?? "inbox"} onChange={(event) => setDraft({ ...draft, bucket: event.target.value as TaskBucket })}>
               <option value="inbox">Inbox</option>
               <option value="thisWeek">This Week</option>
-              <option value="laterRead">Later Read</option>
-              <option value="someday">Someday</option>
+              <option value="today">Today</option>
             </select></label>
             <label>Status<select value={draft.status ?? "open"} onChange={(event) => setDraft({ ...draft, status: event.target.value as TaskStatus })}>
               <option value="open">Open</option>

@@ -1,113 +1,82 @@
 "use client";
 
-import { CheckCircle, Plus } from "../icons";
+import { CheckCircle } from "../icons";
 import { fromDateKey, toDateKey } from "../dates";
-import type { CalendarEvent, Category, FlowTask, TaskBucket } from "../types";
-import {
-  completedTasks,
-  inboxTasks,
-  laterReadTasks,
-  sortCompleted,
-  sortInbox,
-  sortLaterRead,
-  sortThisWeek,
-  sortToday,
-  thisWeekTasks,
-  todayTasks,
-  unfinishedTasks,
-} from "./taskFilters";
+import type { Category, CreateTaskInput, FlowBucket, FlowTask, TaskBucket } from "../types";
+import { completedTasks, sortCompleted } from "./taskFilters";
+import { FlowBoard } from "./FlowBoard";
 import { TaskList } from "./TaskList";
-import { sortCalendarEntries } from "./calendarEntries";
-import { LaterReadList } from "./LaterReadList";
 
-export type FlowView = "month" | "inbox" | "thisWeek" | "today" | "laterRead" | "completed";
+export type FlowView = "month" | "flow" | "completed";
 
 type Props = {
   view: Exclude<FlowView, "month">;
   tasks: FlowTask[];
   categories: Category[];
   today: string;
-  todayEvents: CalendarEvent[];
-  onCapture: () => void;
+  mobileBucket: FlowBucket;
+  onMobileBucketChange: (bucket: FlowBucket) => void;
+  onCreate: (input: CreateTaskInput) => Promise<void>;
   onWrapUp: () => void;
   onEdit: (task: FlowTask) => void;
-  onOpenEvent: (event: CalendarEvent) => void;
   onComplete: (task: FlowTask) => void;
   onReopen: (task: FlowTask) => void;
   onArchive: (task: FlowTask) => void;
-  onMove: (task: FlowTask, bucket: TaskBucket, scheduledDate?: string) => void;
+  onMove: (task: FlowTask, bucket: TaskBucket) => void;
   onReorder: (ids: string[]) => void;
 };
-
-const viewCopy = {
-  inbox: {
-    eyebrow: "Capture freely",
-    title: "Inbox",
-    description: "Unsorted thoughts and tasks, ready when you are.",
-    empty: "Your inbox is clear.",
-  },
-  thisWeek: {
-    eyebrow: "Shape the week",
-    title: "This Week",
-    description: "A considered list of what matters this week.",
-    empty: "Nothing planned for this week yet.",
-  },
-  today: {
-    eyebrow: "One day at a time",
-    title: "Today",
-    description: "A focused view of what you chose for today.",
-    empty: "No tasks scheduled for today.",
-  },
-  laterRead: {
-    eyebrow: "A quiet reading shelf",
-    title: "Later Read",
-    description: "Links worth returning to, without asking for your attention now.",
-    empty: "Links saved for later will appear here.",
-  },
-  completed: {
-    eyebrow: "Quiet progress",
-    title: "Completed",
-    description: "A history of tasks you have finished.",
-    empty: "Completed tasks will appear here.",
-  },
-} as const;
 
 export function FlowWorkspace({
   view,
   tasks,
   categories,
   today,
-  todayEvents,
-  onCapture,
+  mobileBucket,
+  onMobileBucketChange,
+  onCreate,
   onWrapUp,
   onEdit,
-  onOpenEvent,
   onComplete,
   onReopen,
   onArchive,
   onMove,
   onReorder,
 }: Props) {
-  const copy = viewCopy[view];
-  const visible = view === "inbox"
-    ? sortInbox(inboxTasks(tasks))
-    : view === "thisWeek"
-      ? sortThisWeek(thisWeekTasks(tasks))
-      : view === "today"
-        ? sortToday(todayTasks(tasks, today))
-        : view === "laterRead"
-          ? sortLaterRead(laterReadTasks(tasks))
-          : sortCompleted(completedTasks(tasks));
-  const unfinished = view === "today" ? sortToday(unfinishedTasks(tasks, today)) : [];
-  const weekAll = tasks.filter((task) => !task.deletedAt && task.bucket === "thisWeek" && task.status !== "archived");
-  const weekCompleted = weekAll.filter((task) => task.status === "completed").length;
+  if (view === "flow") return (
+    <section className="flowWorkspace flowBoardWorkspace">
+      <header className="flowHeader flowBoardHeader">
+        <div>
+          <p className="eyebrow">Three quiet places</p>
+          <h1>Flow</h1>
+          <p>收集、推进、专注。三个状态平行存在，可以随时调整。</p>
+        </div>
+        <button className="secondaryButton" onClick={onWrapUp}><CheckCircle /> Wrap up</button>
+      </header>
+      <FlowBoard
+        tasks={tasks}
+        categories={categories}
+        today={today}
+        mobileBucket={mobileBucket}
+        onMobileBucketChange={onMobileBucketChange}
+        onCreate={onCreate}
+        onEdit={onEdit}
+        onComplete={onComplete}
+        onReopen={onReopen}
+        onArchive={onArchive}
+        onMove={onMove}
+        onReorder={onReorder}
+      />
+    </section>
+  );
+
+  const visible = sortCompleted(completedTasks(tasks));
   const yesterdayDate = fromDateKey(today);
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
   const yesterday = toDateKey(yesterdayDate);
   const weekStart = fromDateKey(today);
   weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
   const weekStartKey = toDateKey(weekStart);
-  const completedGroups = view === "completed" ? [
+  const groups = [
     { label: "Today", tasks: visible.filter((task) => task.completedAt?.slice(0, 10) === today) },
     { label: "Yesterday", tasks: visible.filter((task) => task.completedAt?.slice(0, 10) === yesterday) },
     { label: "This Week", tasks: visible.filter((task) => {
@@ -118,94 +87,21 @@ export function FlowWorkspace({
       const date = task.completedAt?.slice(0, 10);
       return !date || date < weekStartKey;
     }) },
-  ].filter((group) => group.tasks.length) : [];
-  const orderedTodayEvents = sortCalendarEntries(todayEvents.map((event) => ({
-    type: "event" as const,
-    id: `event:${event.id}`,
-    date: event.startDate,
-    event,
-  }))).map((entry) => entry.type === "event" ? entry.event : null).filter((event): event is CalendarEvent => Boolean(event));
-
-  const taskListProps = {
-    categories,
-    onEdit,
-    onComplete,
-    onReopen,
-    onArchive,
-    onMove,
-    onReorder,
-    today,
-  };
-
+  ].filter((group) => group.tasks.length);
+  const taskListProps = { categories, onEdit, onComplete, onReopen, onArchive, onMove, onReorder, today };
   return (
     <section className="flowWorkspace">
       <header className="flowHeader">
-        <div>
-          <p className="eyebrow">{copy.eyebrow}</p>
-          <h1>{copy.title}</h1>
-          <p>{copy.description}</p>
-        </div>
-        {view !== "completed" && (
-          <div className="flowHeaderActions">
-            {view === "today" && <button className="secondaryButton" onClick={onWrapUp}><CheckCircle /> Wrap up</button>}
-            <button className="primaryButton" onClick={onCapture}><Plus /> Add task</button>
-          </div>
-        )}
+        <div><p className="eyebrow">Quiet progress</p><h1>Completed</h1><p>A history of tasks you have finished.</p></div>
       </header>
-
-      {view === "thisWeek" && weekAll.length > 0 && (
-        <div className="weekProgress" aria-label={`${weekCompleted} of ${weekAll.length} completed`}>
-          <div><span style={{ width: `${(weekCompleted / weekAll.length) * 100}%` }} /></div>
-          <small>{weekCompleted} of {weekAll.length} completed</small>
-        </div>
-      )}
-
-      {view === "today" && (
-        <section className="flowSection todaySchedule">
-          <h2>Schedule</h2>
-          {orderedTodayEvents.length ? (
-            <div className="todayEventList">
-              {orderedTodayEvents.map((event) => (
-                <button className="todayEventRow" key={event.id} onClick={() => onOpenEvent(event)}>
-                  <time>{event.allDay ? "All day" : event.startTime}</time>
-                  <strong>{event.title}</strong>
-                </button>
-              ))}
-            </div>
-          ) : <p className="dayPanelEmpty">No events today.</p>}
-        </section>
-      )}
-
       <section className="flowSection">
-        {view === "today" && <h2>Today tasks</h2>}
-        {view === "laterRead" ? (
-          <LaterReadList
-            tasks={visible}
-            categories={categories}
-            today={today}
-            onEdit={onEdit}
-            onComplete={onComplete}
-            onMoveToday={(task) => onMove(task, "thisWeek", today)}
-            onMoveThisWeek={(task) => onMove(task, "thisWeek")}
-            onSchedule={(task, date) => onMove(task, "thisWeek", date)}
-          />
-        ) : view === "completed" && completedGroups.length ? completedGroups.map((group) => (
+        {groups.length ? groups.map((group) => (
           <div className="completedGroup" key={group.label}>
             <h2>{group.label}</h2>
             <TaskList {...taskListProps} reorderable={false} tasks={group.tasks} emptyMessage="" />
           </div>
-        )) : <TaskList {...taskListProps} tasks={visible} emptyMessage={copy.empty} />}
+        )) : <p className="emptyTaskList">Completed tasks will appear here.</p>}
       </section>
-
-      {view === "today" && unfinished.length > 0 && (
-        <section className="flowSection unfinishedSection">
-          <div className="flowSectionHeading">
-            <div><p className="eyebrow">Needs a decision</p><h2>Unfinished</h2></div>
-            <small>Kept on their original dates</small>
-          </div>
-          <TaskList {...taskListProps} tasks={unfinished} emptyMessage="" />
-        </section>
-      )}
     </section>
   );
 }

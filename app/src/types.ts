@@ -85,7 +85,9 @@ export type MonthlaneBackup = MonthlaneBackupV1 | MonthlaneBackupV2;
 
 export type TaskKind = "task" | "readLater";
 export type TaskStatus = "open" | "completed" | "archived";
-export type TaskBucket = "inbox" | "thisWeek" | "laterRead" | "someday";
+export type FlowBucket = "inbox" | "thisWeek" | "today";
+export type LegacyTaskBucket = "laterRead" | "someday";
+export type TaskBucket = FlowBucket | LegacyTaskBucket;
 
 export type FlowTask = {
   id: string;
@@ -109,6 +111,7 @@ export type FlowTask = {
   sortOrder: number;
   completedAt?: string;
   archivedAt?: string;
+  focusedAt?: string;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;

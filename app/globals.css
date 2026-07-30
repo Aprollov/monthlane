@@ -202,7 +202,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .emptySearch strong { font-family: Georgia, "Times New Roman", serif; font-size: 18px; font-weight: 500; }
 .emptySearch span { color: var(--text-muted); font-size: 11px; }
 .flowWorkspace { min-width: 0; height: 100%; overflow: auto; padding: 42px clamp(22px, 5vw, 72px) 70px; }
+.flowBoardWorkspace { padding: 30px 24px 60px; }
 .flowHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; max-width: 900px; margin: 0 auto 28px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.flowBoardHeader { max-width: none; margin-bottom: 20px; }
 .flowHeader h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 34px; font-weight: 500; letter-spacing: -.03em; }
 .flowHeader > div > p:last-child { margin: 8px 0 0; color: var(--text-muted); font-size: 12px; }
 .flowHeader .primaryButton { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; }
@@ -211,6 +213,26 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .flowHeaderActions button { display: inline-flex; align-items: center; gap: 7px; }
 .flowHeaderActions svg { width: 16px; }
 .flowSection, .weekProgress { max-width: 900px; margin: 0 auto; }
+.flowBoard { min-height: calc(100% - 125px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.flowColumn { min-width: 0; align-self: start; border: 1px solid var(--border); border-radius: 10px; background: rgb(253 253 251 / 62%); padding: 14px 13px 12px; transition: background 140ms ease, border-color 140ms ease; }
+.flowColumnHeader { height: 34px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.flowColumnHeader h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 17px; font-weight: 500; }
+.flowColumnHeader > span { min-width: 23px; height: 20px; display: grid; place-items: center; border-radius: 99px; background: var(--surface-secondary); color: var(--text-muted); font-size: 9px; }
+.flowComposer { min-height: 78px; margin: 5px 0 12px; padding-bottom: 11px; border-bottom: 1px solid var(--border); }
+.flowComposerInput { min-height: 39px; display: grid; grid-template-columns: minmax(0, 1fr) 32px; align-items: center; gap: 5px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 3px 4px 3px 10px; }
+.flowComposerInput:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.flowComposerInput input { min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text-primary); font-size: 11px; }
+.flowComposerInput button { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 6px; background: var(--accent); color: white; cursor: pointer; }
+.flowComposerInput button:disabled { opacity: .35; cursor: default; }
+.flowComposerInput svg { width: 14px; }
+.readLaterToggle { min-height: 27px; display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 9px; }
+.readLaterToggle input { width: 14px; height: 14px; accent-color: var(--accent); }
+.readLaterToggle small { margin-left: auto; color: var(--accent); }
+.flowColumn > .taskList { border-top: 0; }
+.flowColumn .taskRow { grid-template-columns: 20px minmax(0, 1fr) auto; padding-inline: 2px; }
+.flowColumn .taskRowActions > button { display: none; }
+.flowColumn .emptyTaskList { min-height: 112px; border-top: 0; }
+.flowMobileTabs { display: none; }
 .flowSection h2 { margin: 0 0 10px; font-family: Georgia, "Times New Roman", serif; font-size: 19px; font-weight: 500; }
 .todaySchedule { margin-bottom: 34px; }
 .todayEventList { border-top: 1px solid var(--border); }
@@ -320,6 +342,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .sidebarScrim { position: fixed; inset: 0; z-index: 55; border: 0; background: rgb(32 34 31 / 22%); width: 100%; height: 100%; }
   .calendarArea { padding: 12px 10px 0; display: block; }
   .flowWorkspace { height: calc(100dvh - 58px); padding: 28px 16px 100px; }
+  .flowBoardWorkspace { padding: 20px 12px 94px; }
   .flowHeader { margin-bottom: 20px; }
   .flowHeader h1 { font-size: 29px; }
   .flowHeader > div > p:last-child { max-width: 210px; }
@@ -329,6 +352,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .taskRow { grid-template-columns: 22px minmax(0, 1fr) auto; }
   .taskRowActions > button:nth-child(-n + 2) { display: none; }
   .taskRowActions { opacity: 1; }
+  .flowBoardHeader { margin-bottom: 14px; }
+  .flowBoardHeader > .secondaryButton { padding: 0 10px; font-size: 10px; }
+  .flowMobileTabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin-bottom: 12px; border-radius: 8px; background: var(--surface-secondary); padding: 3px; }
+  .flowMobileTabs button { min-height: 34px; border: 0; border-radius: 6px; background: transparent; color: var(--text-secondary); font-size: 10px; cursor: pointer; }
+  .flowMobileTabs button.active { background: var(--surface); color: var(--text-primary); font-weight: 700; box-shadow: 0 1px 3px rgb(45 46 42 / 8%); }
+  .flowBoard { display: block; min-height: 0; }
+  .flowColumn { display: none; border: 0; padding: 8px 2px 0; background: transparent; }
+  .flowColumn.mobileActive { display: block; }
   .laterReadRow { grid-template-columns: 22px minmax(0, 1fr); }
   .laterReadActions { grid-column: 2; justify-content: flex-start; }
   .quickCapture { grid-template-columns: 34px minmax(0, 1fr) 38px; }

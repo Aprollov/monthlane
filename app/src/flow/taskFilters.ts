@@ -1,15 +1,20 @@
-import type { FlowTask } from "../types.ts";
+import type { FlowBucket, FlowTask } from "../types.ts";
 
 const active = (task: FlowTask) => !task.deletedAt && task.status !== "archived";
 
+export const flowBucket = (task: FlowTask): FlowBucket => {
+  if (task.bucket === "thisWeek" || task.bucket === "today") return task.bucket;
+  return "inbox";
+};
+
 export const inboxTasks = (tasks: FlowTask[]) =>
-  tasks.filter((task) => active(task) && task.status === "open" && task.bucket === "inbox" && !task.scheduledDate);
+  tasks.filter((task) => active(task) && task.status === "open" && flowBucket(task) === "inbox");
 
 export const thisWeekTasks = (tasks: FlowTask[]) =>
-  tasks.filter((task) => active(task) && task.status === "open" && task.bucket === "thisWeek");
+  tasks.filter((task) => active(task) && task.status === "open" && flowBucket(task) === "thisWeek");
 
-export const todayTasks = (tasks: FlowTask[], today: string) =>
-  tasks.filter((task) => active(task) && task.status === "open" && task.scheduledDate === today);
+export const todayTasks = (tasks: FlowTask[], _today?: string) =>
+  tasks.filter((task) => active(task) && task.status === "open" && flowBucket(task) === "today");
 
 export const unfinishedTasks = (tasks: FlowTask[], today: string) =>
   tasks.filter((task) => active(task) && task.status === "open" && Boolean(task.scheduledDate) && task.scheduledDate! < today);
@@ -18,7 +23,7 @@ export const completedTasks = (tasks: FlowTask[]) =>
   tasks.filter((task) => !task.deletedAt && task.status === "completed");
 
 export const laterReadTasks = (tasks: FlowTask[]) =>
-  tasks.filter((task) => active(task) && task.status === "open" && task.kind === "readLater" && task.bucket === "laterRead");
+  tasks.filter((task) => active(task) && task.status === "open" && task.kind === "readLater" && flowBucket(task) === "inbox");
 
 export const sortInbox = (tasks: FlowTask[]) =>
   [...tasks].sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt));

@@ -29,7 +29,7 @@ const task = (id, changes = {}) => ({
   ...changes,
 });
 
-test("Inbox contains only open, unscheduled inbox tasks", () => {
+test("Inbox is determined by bucket independently from scheduledDate", () => {
   const tasks = [
     task("1"),
     task("2", { scheduledDate: "2026-07-29" }),
@@ -37,7 +37,7 @@ test("Inbox contains only open, unscheduled inbox tasks", () => {
     task("4", { status: "completed" }),
     task("5", { deletedAt: "2026-07-29" }),
   ];
-  assert.deepEqual(inboxTasks(tasks).map(({ id }) => id), ["1"]);
+  assert.deepEqual(inboxTasks(tasks).map(({ id }) => id), ["1", "2"]);
 });
 
 test("This Week is manual bucket membership, independent of due date", () => {
@@ -49,11 +49,12 @@ test("This Week is manual bucket membership, independent of due date", () => {
   assert.deepEqual(thisWeekTasks(tasks).map(({ id }) => id), ["1", "3"]);
 });
 
-test("Today uses scheduledDate and unfinished keeps original past dates", () => {
+test("Today uses its unique bucket while unfinished still uses scheduledDate", () => {
   const tasks = [
-    task("1", { bucket: "thisWeek", scheduledDate: "2026-07-29" }),
+    task("1", { bucket: "today", scheduledDate: "2026-07-29" }),
     task("2", { scheduledDate: "2026-07-28" }),
     task("3", { scheduledDate: "2026-07-30" }),
+    task("4", { bucket: "thisWeek", scheduledDate: "2026-07-29" }),
   ];
   assert.deepEqual(todayTasks(tasks, "2026-07-29").map(({ id }) => id), ["1"]);
   assert.deepEqual(unfinishedTasks(tasks, "2026-07-29").map(({ id }) => id), ["2"]);
