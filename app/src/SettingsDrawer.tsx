@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { signIn, signUp, synchronize, type CloudConfig, type CloudSession } from "./cloud";
+import { signIn, signUp, synchronize, taskSyncSummaryText, type CloudConfig, type CloudSession } from "./cloud";
 import { exportBackup, importBackup } from "./database";
 import { X } from "./icons";
 import type { MonthlaneBackup } from "./types";
@@ -30,6 +30,7 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
   const [error, setError] = useState("");
   const [lastSync, setLastSync] = useState(() => localStorage.getItem(LAST_SYNC_KEY) ?? "");
   const fileInput = useRef<HTMLInputElement>(null);
+  const replaceFileInput = useRef<HTMLInputElement>(null);
   if (!open) return null;
 
   const saveConfig = () => {
@@ -51,17 +52,22 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
     notify("Backup downloaded.");
   };
 
-  const restoreBackup = async (file?: File) => {
+  const restoreBackup = async (file?: File, mode: "merge" | "replace" = "merge") => {
     if (!file) return;
+    if (mode === "replace" && !window.confirm("This will replace all local events and tasks. Continue?")) {
+      if (replaceFileInput.current) replaceFileInput.current.value = "";
+      return;
+    }
     try {
       const backup = JSON.parse(await file.text()) as MonthlaneBackup;
-      await importBackup(backup);
+      await importBackup(backup, mode);
       await onChanged();
-      notify("Backup merged successfully.");
+      notify(mode === "replace" ? "Local events and tasks were replaced." : "Backup merged successfully.");
     } catch (restoreError) {
       notify(restoreError instanceof Error ? restoreError.message : "Could not restore this backup.");
     } finally {
       if (fileInput.current) fileInput.current.value = "";
+      if (replaceFileInput.current) replaceFileInput.current.value = "";
     }
   };
 
@@ -105,7 +111,7 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
       const syncedAt = new Date().toISOString();
       setLastSync(syncedAt);
       localStorage.setItem(LAST_SYNC_KEY, syncedAt);
-      notify("All devices are up to date.");
+      notify(taskSyncSummaryText(result.summary));
     } catch (syncError) {
       setError(syncError instanceof Error ? syncError.message : "Sync failed.");
     } finally {
@@ -126,10 +132,12 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
           <div className="settingsHeading"><div><h3>Backup and restore</h3><p>Keep a portable copy of everything in your calendar.</p></div></div>
           <div className="settingsActions">
             <button className="secondaryButton" onClick={() => void downloadBackup()}>Download backup</button>
-            <button className="secondaryButton" onClick={() => fileInput.current?.click()}>Restore backup</button>
+            <button className="secondaryButton" onClick={() => fileInput.current?.click()}>Merge backup</button>
+            <button className="dangerOutlineButton" onClick={() => replaceFileInput.current?.click()}>Replace all data</button>
             <input ref={fileInput} className="visuallyHidden" type="file" accept="application/json,.json" onChange={(event) => void restoreBackup(event.target.files?.[0])} />
+            <input ref={replaceFileInput} className="visuallyHidden" type="file" accept="application/json,.json" onChange={(event) => void restoreBackup(event.target.files?.[0], "replace")} />
           </div>
-          <p className="settingsHint">Restoring safely merges records and keeps the newest version of each event.</p>
+          <p className="settingsHint">Merge keeps the newest version of each event and task. Replace requires confirmation and replaces all local events and tasks.</p>
         </section>
 
         <section className="settingsSection">

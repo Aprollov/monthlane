@@ -2,9 +2,12 @@ import {
   defaultCategories,
   type CalendarEvent,
   type Category,
+  type FlowTask,
   type MonthlaneBackup,
+  type MonthlaneBackupV2,
   type RecurrenceException,
 } from "./types.ts";
+import { getDeviceId } from "./device.ts";
 
 const DB_NAME = "monthlane";
 export const DB_VERSION = 2;
@@ -126,16 +129,30 @@ export const softDeleteEvent = async (event: CalendarEvent) => {
   await saveEvent({ ...event, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
 };
 
-export const exportBackup = async (): Promise<MonthlaneBackup> => {
+export const exportBackup = async (): Promise<MonthlaneBackupV2> => {
   const db = await openMonthlaneDb();
-  const tx = db.transaction(["events", "categories", "recurrenceExceptions"]);
-  const [events, categories, exceptions] = await Promise.all([
+  const tx = db.transaction(["events", "tasks", "categories", "recurrenceExceptions", "settings"]);
+  const [events, tasks, categories, exceptions, settings] = await Promise.all([
     requestValue<CalendarEvent[]>(tx.objectStore("events").getAll()),
+    requestValue<FlowTask[]>(tx.objectStore("tasks").getAll()),
     requestValue<Category[]>(tx.objectStore("categories").getAll()),
     requestValue<RecurrenceException[]>(tx.objectStore("recurrenceExceptions").getAll()),
+    requestValue<Array<{ id: string; [key: string]: unknown }>>(tx.objectStore("settings").getAll()),
   ]);
   db.close();
-  return { version: 1, exportedAt: new Date().toISOString(), events, categories, exceptions };
+  const timestamp = new Date().toISOString();
+  return {
+    version: 2,
+    schemaVersion: 2,
+    exportedAt: timestamp,
+    updatedAt: timestamp,
+    events,
+    tasks,
+    categories,
+    exceptions,
+    settings,
+    syncMetadata: { lastUpdatedByDeviceId: getDeviceId(), revision: 1 },
+  };
 };
 
 const newerRecords = <T extends { id: string; updatedAt: string }>(local: T[], incoming: T[]) => {
@@ -147,29 +164,125 @@ const newerRecords = <T extends { id: string; updatedAt: string }>(local: T[], i
   return [...merged.values()];
 };
 
-export const mergeBackups = (local: MonthlaneBackup, incoming: MonthlaneBackup): MonthlaneBackup => ({
-  version: 1,
-  exportedAt: new Date().toISOString(),
-  events: newerRecords(local.events, incoming.events),
-  categories: newerRecords(local.categories, incoming.categories),
-  exceptions: newerRecords(local.exceptions, incoming.exceptions),
-});
+const stableHash = (value: string) => {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+};
 
-export const importBackup = async (backup: MonthlaneBackup) => {
+const comparable = <T extends { id: string }>(record: T) =>
+  JSON.stringify(Object.fromEntries(Object.entries(record).filter(
+    ([key]) => !["id", "createdAt", "updatedAt", "deviceId"].includes(key),
+  )));
+
+const mergeTasks = (local: FlowTask[], incoming: FlowTask[]) => {
+  const merged = new Map(local.map((task) => [task.id, task]));
+  for (const task of incoming) {
+    const existing = merged.get(task.id);
+    if (!existing) {
+      merged.set(task.id, task);
+      continue;
+    }
+    if (comparable(existing) === comparable(task)) {
+      if (task.updatedAt > existing.updatedAt) merged.set(task.id, task);
+      continue;
+    }
+    const delta = Math.abs(Date.parse(existing.updatedAt) - Date.parse(task.updatedAt));
+    const winner = task.updatedAt > existing.updatedAt ? task : existing;
+    const loser = winner === task ? existing : task;
+    merged.set(task.id, winner);
+    if (delta <= 2_000) {
+      const conflictId = `${task.id}-conflict-${stableHash(comparable(loser))}`;
+      if (!merged.has(conflictId)) merged.set(conflictId, {
+        ...loser,
+        id: conflictId,
+        title: `${loser.title} (Sync conflict)`,
+      });
+    }
+  }
+  return [...merged.values()];
+};
+
+export const normalizeBackup = (backup: MonthlaneBackup): MonthlaneBackupV2 => {
+  const candidate = backup as unknown as {
+    version?: number;
+    schemaVersion?: number;
+    exportedAt?: string;
+    exportTime?: string;
+    updatedAt?: string;
+    events?: CalendarEvent[];
+    tasks?: FlowTask[];
+    categories?: Category[];
+    exceptions?: RecurrenceException[];
+    settings?: Array<{ id: string; [key: string]: unknown }>;
+    syncMetadata?: MonthlaneBackupV2["syncMetadata"];
+  };
+  const version = candidate?.version ?? candidate?.schemaVersion;
   if (
-    backup?.version !== 1 ||
-    !Array.isArray(backup.events) ||
-    !Array.isArray(backup.categories) ||
-    !Array.isArray(backup.exceptions)
+    !candidate ||
+    !Array.isArray(candidate.events) ||
+    !Array.isArray(candidate.categories) ||
+    !Array.isArray(candidate.exceptions) ||
+    (version !== 1 && version !== 2)
   ) throw new Error("This is not a valid Monthlane backup.");
+  const now = new Date().toISOString();
+  const exportedAt = candidate.exportedAt ?? candidate.exportTime ?? now;
+  return {
+    version: 2,
+    schemaVersion: 2,
+    exportedAt,
+    updatedAt: version === 2 ? candidate.updatedAt ?? exportedAt : exportedAt,
+    events: candidate.events,
+    tasks: version === 2 && Array.isArray(candidate.tasks) ? candidate.tasks : [],
+    categories: candidate.categories,
+    exceptions: candidate.exceptions,
+    settings: version === 2 && Array.isArray(candidate.settings) ? candidate.settings : [],
+    syncMetadata: version === 2 ? candidate.syncMetadata : undefined,
+  };
+};
 
-  const local = await exportBackup();
-  const merged = mergeBackups(local, backup);
+export const mergeBackups = (localInput: MonthlaneBackup, incomingInput: MonthlaneBackup): MonthlaneBackupV2 => {
+  const local = normalizeBackup(localInput);
+  const incoming = normalizeBackup(incomingInput);
+  const timestamp = new Date().toISOString();
+  return {
+    version: 2,
+    schemaVersion: 2,
+    exportedAt: timestamp,
+    updatedAt: timestamp,
+    events: newerRecords(local.events, incoming.events),
+    tasks: mergeTasks(local.tasks, incoming.tasks),
+    categories: newerRecords(local.categories, incoming.categories),
+    exceptions: newerRecords(local.exceptions, incoming.exceptions),
+    settings: incoming.updatedAt > local.updatedAt ? incoming.settings : local.settings,
+    syncMetadata: {
+      lastUpdatedByDeviceId: incoming.syncMetadata?.lastUpdatedByDeviceId ?? local.syncMetadata?.lastUpdatedByDeviceId ?? "unknown-device",
+      revision: Math.max(local.syncMetadata?.revision ?? 0, incoming.syncMetadata?.revision ?? 0) + 1,
+    },
+  };
+};
+
+export const prepareBackupImport = (
+  local: MonthlaneBackup,
+  incoming: MonthlaneBackup,
+  mode: "merge" | "replace",
+) => mode === "replace" ? normalizeBackup(incoming) : mergeBackups(local, incoming);
+
+export const importBackup = async (backup: MonthlaneBackup, mode: "merge" | "replace" = "merge") => {
+  const normalized = normalizeBackup(backup);
+  const merged = prepareBackupImport(await exportBackup(), normalized, mode);
   const db = await openMonthlaneDb();
-  const tx = db.transaction(["events", "categories", "recurrenceExceptions"], "readwrite");
+  const stores = ["events", "tasks", "categories", "recurrenceExceptions", "settings"];
+  const tx = db.transaction(stores, "readwrite");
+  if (mode === "replace") for (const store of stores) tx.objectStore(store).clear();
   for (const event of merged.events) tx.objectStore("events").put(event);
+  for (const task of merged.tasks) tx.objectStore("tasks").put(task);
   for (const category of merged.categories) tx.objectStore("categories").put(category);
   for (const exception of merged.exceptions) tx.objectStore("recurrenceExceptions").put(exception);
+  for (const setting of merged.settings ?? []) tx.objectStore("settings").put(setting);
   await transactionDone(tx);
   db.close();
   return merged;

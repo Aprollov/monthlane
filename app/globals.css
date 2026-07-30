@@ -47,6 +47,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .secondaryButton:hover { background: var(--surface-hover); }
 .dangerButton { background: transparent; color: var(--danger); margin-right: auto; }
 .dangerButton:hover { background: var(--danger-soft); }
+.dangerOutlineButton { min-height: 38px; border: 1px solid #d9bcbc; border-radius: 8px; background: transparent; color: var(--danger); padding: 0 13px; cursor: pointer; font-size: 12px; font-weight: 600; }
+.dangerOutlineButton:hover { background: var(--danger-soft); }
 .newEventButton { display: inline-flex; gap: 7px; align-items: center; }
 .todayButton { margin-left: 8px; }
 .workspace { height: calc(100dvh - 68px); display: grid; grid-template-columns: 238px minmax(0, 1fr); padding: 0 18px 18px; gap: 18px; overflow: hidden; }

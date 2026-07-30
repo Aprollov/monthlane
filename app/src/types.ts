@@ -57,13 +57,31 @@ export type EventDraft = Pick<
   "title" | "startDate" | "allDay" | "startTime" | "endTime" | "notes" | "categoryId" | "recurrence"
 >;
 
-export type MonthlaneBackup = {
+export type MonthlaneBackupV1 = {
   version: 1;
   exportedAt: string;
   events: CalendarEvent[];
   categories: Category[];
   exceptions: RecurrenceException[];
 };
+
+export type MonthlaneBackupV2 = {
+  version: 2;
+  schemaVersion: 2;
+  exportedAt: string;
+  updatedAt: string;
+  events: CalendarEvent[];
+  tasks: FlowTask[];
+  categories: Category[];
+  exceptions: RecurrenceException[];
+  settings?: Array<{ id: string; [key: string]: unknown }>;
+  syncMetadata?: {
+    lastUpdatedByDeviceId: string;
+    revision: number;
+  };
+};
+
+export type MonthlaneBackup = MonthlaneBackupV1 | MonthlaneBackupV2;
 
 export type TaskKind = "task" | "readLater";
 export type TaskStatus = "open" | "completed" | "archived";

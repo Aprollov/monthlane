@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { mergeBackups } from "../app/src/database.ts";
+import { mergeBackups, normalizeBackup, prepareBackupImport } from "../app/src/database.ts";
+import { summarizeTaskSync, taskSyncSummaryText } from "../app/src/cloud.ts";
 
 const event = (id, title, updatedAt) => ({
   id,
@@ -36,6 +37,7 @@ test("cloud merge keeps the newest edit and records from both devices", () => {
   ]);
 
   const merged = mergeBackups(local, remote);
+  assert.equal(merged.version, 2);
   assert.deepEqual(
     merged.events.map(({ id, title }) => [id, title]),
     [
@@ -53,4 +55,106 @@ test("cloud merge preserves the newest deletion marker", () => {
     deletedAt: "2026-07-29T12:00:00.000Z",
   };
   assert.equal(mergeBackups(local, backup([deleted])).events[0].deletedAt, deleted.deletedAt);
+});
+
+const flowTask = (id, title, updatedAt, changes = {}) => ({
+  id,
+  title,
+  kind: "task",
+  status: "open",
+  bucket: "inbox",
+  tags: [],
+  sortOrder: 0,
+  createdAt: updatedAt,
+  updatedAt,
+  deviceId: "test",
+  ...changes,
+});
+
+const backupV2 = (tasks, changes = {}) => ({
+  version: 2,
+  schemaVersion: 2,
+  exportedAt: "2026-07-30T00:00:00.000Z",
+  updatedAt: "2026-07-30T00:00:00.000Z",
+  events: [],
+  tasks,
+  categories: [],
+  exceptions: [],
+  ...changes,
+});
+
+test("V1 backup normalization adds an empty tasks collection", () => {
+  const normalized = normalizeBackup(backup([]));
+  assert.equal(normalized.version, 2);
+  assert.deepEqual(normalized.tasks, []);
+});
+
+test("schemaVersion-only legacy cloud payload remains compatible", () => {
+  const normalized = normalizeBackup({
+    schemaVersion: 1,
+    exportTime: "2026-07-29T00:00:00.000Z",
+    events: [],
+    categories: [],
+    exceptions: [],
+  });
+  assert.deepEqual(normalized.tasks, []);
+  assert.equal(normalized.exportedAt, "2026-07-29T00:00:00.000Z");
+});
+
+test("V2 import preserves tasks and replace does not keep local-only records", () => {
+  const local = backupV2([flowTask("local", "Local", "2026-07-30T09:00:00.000Z")]);
+  const incoming = backupV2([flowTask("incoming", "Incoming", "2026-07-30T10:00:00.000Z")]);
+  assert.deepEqual(prepareBackupImport(local, incoming, "merge").tasks.map(({ id }) => id), ["local", "incoming"]);
+  assert.deepEqual(prepareBackupImport(local, incoming, "replace").tasks.map(({ id }) => id), ["incoming"]);
+});
+
+test("task merge keeps additions, newest updates, and deletion markers", () => {
+  const local = backupV2([
+    flowTask("shared", "Local old", "2026-07-30T10:00:00.000Z"),
+    flowTask("local", "Local", "2026-07-30T09:00:00.000Z"),
+  ]);
+  const remote = backupV2([
+    flowTask("shared", "Remote new", "2026-07-30T10:10:00.000Z"),
+    flowTask("remote", "Remote", "2026-07-30T08:00:00.000Z"),
+    flowTask("deleted", "Deleted", "2026-07-30T11:00:00.000Z", { deletedAt: "2026-07-30T11:00:00.000Z" }),
+  ]);
+  const merged = mergeBackups(local, remote);
+  assert.equal(merged.tasks.find(({ id }) => id === "shared")?.title, "Remote new");
+  assert.ok(merged.tasks.some(({ id }) => id === "local"));
+  assert.ok(merged.tasks.some(({ id }) => id === "remote"));
+  assert.ok(merged.tasks.find(({ id }) => id === "deleted")?.deletedAt);
+});
+
+test("near-simultaneous task edits create one stable conflict copy", () => {
+  const local = backupV2([flowTask("shared", "Local title", "2026-07-30T10:00:00.000Z")]);
+  const remote = backupV2([flowTask("shared", "Remote title", "2026-07-30T10:00:01.000Z")]);
+  const once = mergeBackups(local, remote);
+  const conflicts = once.tasks.filter(({ id }) => id.includes("-conflict-"));
+  assert.equal(conflicts.length, 1);
+  assert.match(conflicts[0].title, /Sync conflict/);
+  assert.equal(mergeBackups(once, remote).tasks.filter(({ id }) => id.includes("-conflict-")).length, 1);
+});
+
+test("timestamp-only task changes keep the newest record without a conflict", () => {
+  const local = backupV2([flowTask("shared", "Same title", "2026-07-30T10:00:00.000Z")]);
+  const remote = backupV2([flowTask("shared", "Same title", "2026-07-30T10:00:01.000Z")]);
+  const merged = mergeBackups(local, remote);
+  assert.equal(merged.tasks.length, 1);
+  assert.equal(merged.tasks[0].updatedAt, "2026-07-30T10:00:01.000Z");
+});
+
+test("task sync summary reports task-level changes", () => {
+  const local = backupV2([
+    flowTask("updated", "Old", "2026-07-30T09:00:00.000Z"),
+    flowTask("deleted", "Delete me", "2026-07-30T09:00:00.000Z"),
+  ]);
+  const merged = backupV2([
+    flowTask("updated", "New", "2026-07-30T10:00:00.000Z"),
+    flowTask("deleted", "Delete me", "2026-07-30T10:00:00.000Z", { deletedAt: "2026-07-30T10:00:00.000Z" }),
+    flowTask("added", "Added", "2026-07-30T10:00:00.000Z"),
+    flowTask("updated-conflict-x", "Old (Sync conflict)", "2026-07-30T09:00:00.000Z"),
+  ]);
+  const summary = summarizeTaskSync(local, merged);
+  assert.deepEqual(summary, { added: 1, updated: 1, deleted: 1, conflicts: 1 });
+  assert.equal(taskSyncSummaryText(summary), "1 task added · 1 task updated · 1 task deleted · 1 conflict created");
 });

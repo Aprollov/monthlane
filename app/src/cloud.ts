@@ -1,5 +1,5 @@
-import { mergeBackups } from "./database";
-import type { MonthlaneBackup } from "./types";
+import { mergeBackups, normalizeBackup } from "./database.ts";
+import type { MonthlaneBackup, MonthlaneBackupV2 } from "./types.ts";
 
 export type CloudConfig = { url: string; anonKey: string };
 export type CloudSession = {
@@ -7,6 +7,42 @@ export type CloudSession = {
   refreshToken: string;
   expiresAt: number;
   user: { id: string; email: string };
+};
+
+export type TaskSyncSummary = {
+  added: number;
+  updated: number;
+  deleted: number;
+  conflicts: number;
+};
+
+export const summarizeTaskSync = (localInput: MonthlaneBackup, mergedInput: MonthlaneBackup): TaskSyncSummary => {
+  const local = normalizeBackup(localInput);
+  const merged = normalizeBackup(mergedInput);
+  const localById = new Map(local.tasks.map((task) => [task.id, task]));
+  const conflicts = merged.tasks.filter((task) => task.id.includes("-conflict-") && !localById.has(task.id)).length;
+  const added = merged.tasks.filter((task) => !task.id.includes("-conflict-") && !localById.has(task.id)).length;
+  const updatedTasks = merged.tasks.filter((task) => {
+    const existing = localById.get(task.id);
+    return Boolean(existing && task.updatedAt > existing.updatedAt);
+  });
+  return {
+    added,
+    updated: updatedTasks.filter((task) => !task.deletedAt).length,
+    deleted: updatedTasks.filter((task) => task.deletedAt).length,
+    conflicts,
+  };
+};
+
+export const taskSyncSummaryText = (summary: TaskSyncSummary) => {
+  const noun = (count: number) => count === 1 ? "task" : "tasks";
+  const parts = [
+    summary.added && `${summary.added} ${noun(summary.added)} added`,
+    summary.updated && `${summary.updated} ${noun(summary.updated)} updated`,
+    summary.deleted && `${summary.deleted} ${noun(summary.deleted)} deleted`,
+    summary.conflicts && `${summary.conflicts} conflict${summary.conflicts === 1 ? "" : "s"} created`,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "All devices are up to date.";
 };
 
 const normalizedUrl = (value: string) => value.trim().replace(/\/+$/, "");
@@ -88,6 +124,7 @@ export const synchronize = async (
     config.anonKey,
   );
   const merged = rows[0]?.payload ? mergeBackups(local, rows[0].payload) : local;
+  const summary = summarizeTaskSync(local, merged);
   await request(
     `${normalizedUrl(config.url)}/rest/v1/monthlane_backups?on_conflict=user_id`,
     {
@@ -101,5 +138,5 @@ export const synchronize = async (
     },
     config.anonKey,
   );
-  return { backup: merged, session: activeSession };
+  return { backup: merged as MonthlaneBackupV2, session: activeSession, summary };
 };
