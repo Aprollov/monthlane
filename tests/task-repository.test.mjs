@@ -61,6 +61,14 @@ test("updates a task while preserving id, createdAt, and deviceId", async () => 
   assert.notEqual(updated.updatedAt, original.updatedAt);
 });
 
+test("scheduling a task does not change its Flow bucket", async () => {
+  const { repository } = createHarness();
+  const original = await repository.createTask({ title: "Calendar only", bucket: "inbox" });
+  const scheduled = await repository.updateTask(original.id, { scheduledDate: "2026-08-08" });
+  assert.equal(scheduled.bucket, "inbox");
+  assert.equal(scheduled.scheduledDate, "2026-08-08");
+});
+
 test("completes and reopens a task without changing its bucket or schedule", async () => {
   const { repository } = createHarness();
   const original = await repository.createTask({

@@ -85,7 +85,7 @@ export function TaskEditorDrawer({ open, task, categories, onClose, onSave, onDe
             </select></label>
           </div>
           <div className="formSplit">
-            <label>Scheduled date<input type="date" value={draft.scheduledDate ?? ""} onChange={(event) => setDraft({ ...draft, scheduledDate: event.target.value || undefined, bucket: event.target.value && draft.bucket === "inbox" ? "thisWeek" : draft.bucket })} /></label>
+            <label>Scheduled date<input type="date" value={draft.scheduledDate ?? ""} onChange={(event) => setDraft({ ...draft, scheduledDate: event.target.value || undefined })} /></label>
             <label>Time<input type="time" value={draft.scheduledTime ?? ""} onChange={(event) => setDraft({ ...draft, scheduledTime: event.target.value || undefined })} /></label>
           </div>
           <label>Calendar<select value={draft.categoryId ?? ""} onChange={(event) => setDraft({ ...draft, categoryId: event.target.value || undefined })}>

@@ -206,6 +206,34 @@ const mergeTasks = (local: FlowTask[], incoming: FlowTask[]) => {
   return [...merged.values()];
 };
 
+const validTaskBuckets = new Set(["inbox", "thisWeek", "today", "laterRead", "someday"]);
+
+export const normalizeFlowTask = (
+  input: Partial<FlowTask> & { id: string; title: string },
+  fallbackTimestamp: string,
+  fallbackOrder = 0,
+): FlowTask => {
+  const legacy = input as Partial<FlowTask> & { completed?: boolean; readLater?: boolean };
+  const createdAt = input.createdAt ?? fallbackTimestamp;
+  const updatedAt = input.updatedAt ?? createdAt;
+  const parsedCreatedAt = Date.parse(createdAt);
+  return {
+    ...input,
+    id: input.id,
+    title: input.title,
+    kind: input.kind ?? (legacy.readLater ? "readLater" : "task"),
+    status: input.status ?? (legacy.completed ? "completed" : "open"),
+    bucket: input.bucket && validTaskBuckets.has(input.bucket) ? input.bucket : "inbox",
+    tags: Array.isArray(input.tags) ? input.tags : [],
+    sortOrder: Number.isFinite(input.sortOrder)
+      ? input.sortOrder!
+      : Number.isFinite(parsedCreatedAt) ? parsedCreatedAt : fallbackOrder,
+    createdAt,
+    updatedAt,
+    deviceId: input.deviceId ?? "legacy-device",
+  };
+};
+
 export const normalizeBackup = (backup: MonthlaneBackup): MonthlaneBackupV2 => {
   const candidate = backup as unknown as {
     version?: number;
@@ -236,7 +264,9 @@ export const normalizeBackup = (backup: MonthlaneBackup): MonthlaneBackupV2 => {
     exportedAt,
     updatedAt: version === 2 ? candidate.updatedAt ?? exportedAt : exportedAt,
     events: candidate.events,
-    tasks: version === 2 && Array.isArray(candidate.tasks) ? candidate.tasks : [],
+    tasks: version === 2 && Array.isArray(candidate.tasks)
+      ? candidate.tasks.map((task, index) => normalizeFlowTask(task, exportedAt, index))
+      : [],
     categories: candidate.categories,
     exceptions: candidate.exceptions,
     settings: version === 2 && Array.isArray(candidate.settings) ? candidate.settings : [],

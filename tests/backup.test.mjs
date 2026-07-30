@@ -108,6 +108,62 @@ test("V2 import preserves tasks and replace does not keep local-only records", (
   assert.deepEqual(prepareBackupImport(local, incoming, "replace").tasks.map(({ id }) => id), ["incoming"]);
 });
 
+test("legacy V2 tasks receive safe Flow defaults without losing schedule data", () => {
+  const normalized = normalizeBackup(backupV2([{
+    id: "legacy",
+    title: "Legacy scheduled task",
+    scheduledDate: "2026-08-08",
+    completed: false,
+    createdAt: "2026-07-30T08:00:00.000Z",
+    updatedAt: "2026-07-30T09:00:00.000Z",
+  }]));
+  const [task] = normalized.tasks;
+  assert.equal(task.bucket, "inbox");
+  assert.equal(task.status, "open");
+  assert.equal(task.kind, "task");
+  assert.equal(task.scheduledDate, "2026-08-08");
+  assert.equal(task.sortOrder, Date.parse(task.createdAt));
+  assert.deepEqual(task.tags, []);
+});
+
+test("legacy read-later and completed flags remain compatible", () => {
+  const normalized = normalizeBackup(backupV2([{
+    id: "legacy-link",
+    title: "Read this",
+    readLater: true,
+    completed: true,
+    createdAt: "2026-07-30T08:00:00.000Z",
+    updatedAt: "2026-07-30T09:00:00.000Z",
+  }]));
+  assert.equal(normalized.tasks[0].kind, "readLater");
+  assert.equal(normalized.tasks[0].status, "completed");
+  assert.equal(normalized.tasks[0].bucket, "inbox");
+});
+
+test("current Flow planning fields survive backup normalization", () => {
+  const original = flowTask("planned", "Planned", "2026-07-30T09:00:00.000Z", {
+    bucket: "today",
+    focusedAt: "2026-07-29T09:00:00.000Z",
+    scheduledDate: "2026-08-08",
+    sortOrder: 256,
+  });
+  const [normalized] = normalizeBackup(backupV2([original])).tasks;
+  assert.deepEqual(
+    {
+      bucket: normalized.bucket,
+      focusedAt: normalized.focusedAt,
+      scheduledDate: normalized.scheduledDate,
+      sortOrder: normalized.sortOrder,
+    },
+    {
+      bucket: "today",
+      focusedAt: "2026-07-29T09:00:00.000Z",
+      scheduledDate: "2026-08-08",
+      sortOrder: 256,
+    },
+  );
+});
+
 test("task merge keeps additions, newest updates, and deletion markers", () => {
   const local = backupV2([
     flowTask("shared", "Local old", "2026-07-30T10:00:00.000Z"),
