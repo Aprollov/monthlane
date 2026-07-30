@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { InboxIcon, X } from "../icons";
 import type { CreateTaskInput } from "../types";
+import { captureInputFromText, findUrl } from "./urlDetection";
 
 type Props = {
   open: boolean;
@@ -27,17 +28,18 @@ export function QuickCapture({ open, defaults, onClose, onCreate }: Props) {
         if (!title.trim()) return;
         setBusy(true);
         try {
-          await onCreate({ ...defaults, title });
+          await onCreate(captureInputFromText(title, defaults));
           setTitle("");
           onClose();
         } finally {
           setBusy(false);
         }
       }}>
-        <div className="captureIcon"><InboxIcon /></div>
+        <div className={`captureIcon ${findUrl(title) ? "linkDetected" : ""}`}><InboxIcon /></div>
         <div className="captureInput">
           <label id="capture-title" htmlFor="quick-capture">Quick capture</label>
           <input ref={inputRef} id="quick-capture" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="What’s on your mind?" />
+          {findUrl(title) && <small>Link detected · save to Later Read</small>}
         </div>
         <button className="primaryButton" disabled={busy || !title.trim()} type="submit">Add</button>
         <button className="iconButton" type="button" onClick={onClose} aria-label="Close quick capture"><X /></button>

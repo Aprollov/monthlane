@@ -6,8 +6,10 @@ import type { CalendarEvent, Category, FlowTask, TaskBucket } from "../types";
 import {
   completedTasks,
   inboxTasks,
+  laterReadTasks,
   sortCompleted,
   sortInbox,
+  sortLaterRead,
   sortThisWeek,
   sortToday,
   thisWeekTasks,
@@ -16,8 +18,9 @@ import {
 } from "./taskFilters";
 import { TaskList } from "./TaskList";
 import { sortCalendarEntries } from "./calendarEntries";
+import { LaterReadList } from "./LaterReadList";
 
-export type FlowView = "month" | "inbox" | "thisWeek" | "today" | "completed";
+export type FlowView = "month" | "inbox" | "thisWeek" | "today" | "laterRead" | "completed";
 
 type Props = {
   view: Exclude<FlowView, "month">;
@@ -55,6 +58,12 @@ const viewCopy = {
     description: "A focused view of what you chose for today.",
     empty: "No tasks scheduled for today.",
   },
+  laterRead: {
+    eyebrow: "A quiet reading shelf",
+    title: "Later Read",
+    description: "Links worth returning to, without asking for your attention now.",
+    empty: "Links saved for later will appear here.",
+  },
   completed: {
     eyebrow: "Quiet progress",
     title: "Completed",
@@ -86,7 +95,9 @@ export function FlowWorkspace({
       ? sortThisWeek(thisWeekTasks(tasks))
       : view === "today"
         ? sortToday(todayTasks(tasks, today))
-        : sortCompleted(completedTasks(tasks));
+        : view === "laterRead"
+          ? sortLaterRead(laterReadTasks(tasks))
+          : sortCompleted(completedTasks(tasks));
   const unfinished = view === "today" ? sortToday(unfinishedTasks(tasks, today)) : [];
   const weekAll = tasks.filter((task) => !task.deletedAt && task.bucket === "thisWeek" && task.status !== "archived");
   const weekCompleted = weekAll.filter((task) => task.status === "completed").length;
@@ -167,7 +178,18 @@ export function FlowWorkspace({
 
       <section className="flowSection">
         {view === "today" && <h2>Today tasks</h2>}
-        {view === "completed" && completedGroups.length ? completedGroups.map((group) => (
+        {view === "laterRead" ? (
+          <LaterReadList
+            tasks={visible}
+            categories={categories}
+            today={today}
+            onEdit={onEdit}
+            onComplete={onComplete}
+            onMoveToday={(task) => onMove(task, "thisWeek", today)}
+            onMoveThisWeek={(task) => onMove(task, "thisWeek")}
+            onSchedule={(task, date) => onMove(task, "thisWeek", date)}
+          />
+        ) : view === "completed" && completedGroups.length ? completedGroups.map((group) => (
           <div className="completedGroup" key={group.label}>
             <h2>{group.label}</h2>
             <TaskList {...taskListProps} reorderable={false} tasks={group.tasks} emptyMessage="" />

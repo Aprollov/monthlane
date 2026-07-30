@@ -15,7 +15,7 @@ import { QuickCapture } from "./flow/QuickCapture";
 import { TaskEditorDrawer } from "./flow/TaskEditorDrawer";
 import { WrapUpDialog } from "./flow/WrapUpDialog";
 import { groupCalendarEntries } from "./flow/calendarEntries";
-import { inboxTasks, thisWeekTasks, todayTasks } from "./flow/taskFilters";
+import { inboxTasks, laterReadTasks, thisWeekTasks, todayTasks } from "./flow/taskFilters";
 import { taskRepository } from "./flow/taskRepository";
 import { changesForWrapUpAction, summarizeWrapUp, wrapUpSummaryText, wrapUpTasks, type WrapUpPlanItem } from "./flow/wrapUp";
 import { CalendarIcon, ChevronLeft, ChevronRight, Menu, Plus, Search, Settings, Sliders } from "./icons";
@@ -308,6 +308,7 @@ export function MonthlaneApp() {
     inbox: inboxTasks(tasks).length,
     thisWeek: thisWeekTasks(tasks).length,
     today: todayTasks(tasks, todayKey).length,
+    laterRead: laterReadTasks(tasks).length,
   };
   const wrapUpGroups = useMemo(() => wrapUpTasks(tasks, todayKey), [tasks, todayKey]);
 
@@ -315,6 +316,15 @@ export function MonthlaneApp() {
     setActiveView(view);
     setSidebarOpen(false);
   };
+
+  const captureDefaultsForView = (view: FlowView): Omit<CreateTaskInput, "title"> =>
+    view === "today"
+      ? { bucket: "thisWeek", scheduledDate: todayKey }
+      : view === "thisWeek"
+        ? { bucket: "thisWeek" }
+        : view === "laterRead"
+          ? { bucket: "laterRead", kind: "readLater" }
+          : { bucket: "inbox" };
 
   const createTask = async (input: CreateTaskInput) => {
     await taskRepository.createTask(input);
@@ -378,11 +388,7 @@ export function MonthlaneApp() {
           <button className="iconButton" onClick={() => setSearchOpen(true)} aria-label="Search events" title="Search events"><Search /></button>
           <button className="primaryButton newEventButton" onClick={() => activeView === "month"
             ? openCreate()
-            : openCapture(activeView === "today"
-              ? { bucket: "thisWeek", scheduledDate: todayKey }
-              : activeView === "thisWeek"
-                ? { bucket: "thisWeek" }
-                : { bucket: "inbox" })}>
+            : openCapture(captureDefaultsForView(activeView))}>
             <Plus /><span>{activeView === "month" ? "New event" : "Add task"}</span>
           </button>
           <button className="iconButton" onClick={() => setSettingsOpen(true)} aria-label="Open settings" title="Settings"><Settings /></button>
@@ -548,11 +554,7 @@ export function MonthlaneApp() {
           today={todayKey}
           todayEvents={todayExpandedEvents}
           onWrapUp={() => setWrapUpOpen(true)}
-          onCapture={() => openCapture(activeView === "today"
-            ? { bucket: "thisWeek", scheduledDate: todayKey }
-            : activeView === "thisWeek"
-              ? { bucket: "thisWeek" }
-              : { bucket: "inbox" })}
+          onCapture={() => openCapture(captureDefaultsForView(activeView))}
           onEdit={setEditingTask}
           onOpenEvent={selectEvent}
           onComplete={async (task) => { await taskRepository.completeTask(task.id); await refresh(); notify("Task completed."); }}
@@ -567,7 +569,7 @@ export function MonthlaneApp() {
         <button className={activeView === "month" ? "active" : ""} onClick={() => selectView("month")}><CalendarIcon /><span>Month</span></button>
         <button className={activeView === "today" ? "active" : ""} onClick={() => selectView("today")}><CalendarIcon /><span>Today</span></button>
         <button className={activeView === "inbox" ? "active" : ""} onClick={() => selectView("inbox")}><Sliders /><span>Inbox</span></button>
-        <button className="mobileAdd" onClick={() => activeView === "month" ? openCreate() : openCapture(activeView === "today" ? { bucket: "thisWeek", scheduledDate: todayKey } : activeView === "thisWeek" ? { bucket: "thisWeek" } : { bucket: "inbox" })}><Plus /><span>Add</span></button>
+        <button className="mobileAdd" onClick={() => activeView === "month" ? openCreate() : openCapture(captureDefaultsForView(activeView))}><Plus /><span>Add</span></button>
         <button onClick={() => setSidebarOpen(true)}><Menu /><span>More</span></button>
       </nav>
 

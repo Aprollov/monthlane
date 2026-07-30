@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X } from "../icons";
 import type { Category, FlowTask, TaskBucket, TaskStatus, UpdateTaskInput } from "../types";
+import { detectLinkSource } from "./urlDetection";
 
 type Props = {
   open: boolean;
@@ -30,6 +31,11 @@ export function TaskEditorDrawer({ open, task, categories, onClose, onSave, onDe
       tags: task.tags,
       estimatedMinutes: task.estimatedMinutes,
       status: task.status,
+      kind: task.kind,
+      url: task.url,
+      sourceType: task.sourceType,
+      siteName: task.siteName,
+      pageTitle: task.pageTitle,
     });
     setMore(Boolean(task.dueDate || task.tags.length || task.estimatedMinutes));
   }, [task]);
@@ -40,7 +46,7 @@ export function TaskEditorDrawer({ open, task, categories, onClose, onSave, onDe
       <button className="drawerScrim" onClick={onClose} aria-label="Close task editor" />
       <aside className="eventDrawer taskEditor" role="dialog" aria-modal="true" aria-labelledby="task-editor-title">
         <header className="drawerHeader">
-          <div><p className="eyebrow">Flow task</p><h2 id="task-editor-title">Edit task</h2></div>
+          <div><p className="eyebrow">{task.kind === "readLater" ? "Later Read" : "Flow task"}</p><h2 id="task-editor-title">Edit task</h2></div>
           <button className="iconButton" onClick={onClose} aria-label="Close task editor"><X /></button>
         </header>
         <form className="eventForm" onSubmit={async (event) => {
@@ -51,6 +57,18 @@ export function TaskEditorDrawer({ open, task, categories, onClose, onSave, onDe
         }}>
           <label>Title<input required value={draft.title ?? ""} onChange={(event) => setDraft({ ...draft, title: event.target.value })} /></label>
           <label>Notes<textarea rows={4} value={draft.notes ?? ""} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} /></label>
+          {task.kind === "readLater" && <>
+            <label>Link<input type="url" value={draft.url ?? ""} onChange={(event) => {
+              const source = detectLinkSource(event.target.value);
+              setDraft({
+                ...draft,
+                url: event.target.value || undefined,
+                sourceType: source?.sourceType,
+                siteName: source?.siteName,
+              });
+            }} /></label>
+            <p className="linkSourceHint">{draft.siteName ?? "Web link"} · Titles remain editable when metadata is unavailable.</p>
+          </>}
           <div className="formSplit">
             <label>Bucket<select value={draft.bucket ?? "inbox"} onChange={(event) => setDraft({ ...draft, bucket: event.target.value as TaskBucket })}>
               <option value="inbox">Inbox</option>

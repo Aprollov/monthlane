@@ -17,6 +17,9 @@ export const unfinishedTasks = (tasks: FlowTask[], today: string) =>
 export const completedTasks = (tasks: FlowTask[]) =>
   tasks.filter((task) => !task.deletedAt && task.status === "completed");
 
+export const laterReadTasks = (tasks: FlowTask[]) =>
+  tasks.filter((task) => active(task) && task.status === "open" && task.kind === "readLater" && task.bucket === "laterRead");
+
 export const sortInbox = (tasks: FlowTask[]) =>
   [...tasks].sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt));
 
@@ -36,3 +39,5 @@ export const sortToday = (tasks: FlowTask[]) =>
 
 export const sortCompleted = (tasks: FlowTask[]) =>
   [...tasks].sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? ""));
+
+export const sortLaterRead = sortInbox;

@@ -13,6 +13,7 @@ const items: Array<{ view: Exclude<FlowView, "month">; label: string; icon: type
   { view: "inbox", label: "Inbox", icon: InboxIcon },
   { view: "thisWeek", label: "This Week", icon: CalendarCheck },
   { view: "today", label: "Today", icon: Sun },
+  { view: "laterRead", label: "Later Read", icon: BookOpen },
   { view: "completed", label: "Completed", icon: CheckCircle },
 ];
 

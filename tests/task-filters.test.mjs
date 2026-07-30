@@ -4,8 +4,10 @@ import test from "node:test";
 import {
   completedTasks,
   inboxTasks,
+  laterReadTasks,
   sortCompleted,
   sortInbox,
+  sortLaterRead,
   sortThisWeek,
   sortToday,
   thisWeekTasks,
@@ -63,6 +65,19 @@ test("Completed excludes deleted tasks", () => {
     task("2", { status: "completed", deletedAt: "2026-07-29" }),
   ];
   assert.deepEqual(completedTasks(tasks).map(({ id }) => id), ["1"]);
+});
+
+test("Later Read contains only open read-later links in its bucket", () => {
+  const tasks = [
+    task("1", { kind: "readLater", bucket: "laterRead", url: "https://example.com" }),
+    task("2", { kind: "task", bucket: "laterRead" }),
+    task("3", { kind: "readLater", bucket: "laterRead", status: "completed" }),
+  ];
+  assert.deepEqual(laterReadTasks(tasks).map(({ id }) => id), ["1"]);
+  assert.deepEqual(sortLaterRead([
+    task("1", { sortOrder: 2 }),
+    task("2", { sortOrder: 1 }),
+  ]).map(({ id }) => id), ["2", "1"]);
 });
 
 test("sorters follow view-specific ordering", () => {
