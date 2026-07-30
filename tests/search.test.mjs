@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { searchEvents } from "../app/src/search.ts";
+import { searchEvents, searchTasks } from "../app/src/search.ts";
 
 const categories = [
   { id: "work", name: "Work" },
@@ -34,4 +34,29 @@ test("search matches title, notes, and calendar names", () => {
 
 test("search applies calendar filters and excludes deleted events", () => {
   assert.deepEqual(searchEvents(events, categories, "", "work").map((item) => item.id), ["2"]);
+});
+
+const task = (id, changes = {}) => ({
+  id,
+  title: id,
+  kind: "task",
+  status: "open",
+  bucket: "inbox",
+  tags: [],
+  sortOrder: 0,
+  createdAt: "2026-07-30T08:00:00.000Z",
+  updatedAt: "2026-07-30T08:00:00.000Z",
+  deviceId: "test",
+  ...changes,
+});
+
+test("task search matches title, notes, tags, category, and Later Read metadata", () => {
+  const tasks = [
+    task("reply", { title: "Reply to client", notes: "German account", categoryId: "work", tags: ["follow-up"] }),
+    task("article", { kind: "readLater", bucket: "laterRead", title: "Reading", pageTitle: "Design systems", siteName: "YouTube", url: "https://youtube.com/watch?v=1" }),
+  ];
+  assert.deepEqual(searchTasks(tasks, categories, "German").map(({ id }) => id), ["reply"]);
+  assert.deepEqual(searchTasks(tasks, categories, "follow-up").map(({ id }) => id), ["reply"]);
+  assert.deepEqual(searchTasks(tasks, categories, "YouTube").map(({ id }) => id), ["article"]);
+  assert.deepEqual(searchTasks(tasks, categories, "work").map(({ id }) => id), ["reply"]);
 });

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { X } from "../icons";
 import type { Category, FlowTask, TaskBucket, TaskStatus, UpdateTaskInput } from "../types";
 import { detectLinkSource } from "./urlDetection";
+import { useDialogFocus } from "../useDialogFocus";
 
 type Props = {
   open: boolean;
@@ -18,6 +19,7 @@ export function TaskEditorDrawer({ open, task, categories, onClose, onSave, onDe
   const [draft, setDraft] = useState<UpdateTaskInput>({});
   const [more, setMore] = useState(false);
   const [busy, setBusy] = useState(false);
+  const dialogRef = useDialogFocus<HTMLElement>(open, onClose);
   useEffect(() => {
     if (!task) return;
     setDraft({
@@ -44,7 +46,7 @@ export function TaskEditorDrawer({ open, task, categories, onClose, onSave, onDe
   return (
     <>
       <button className="drawerScrim" onClick={onClose} aria-label="Close task editor" />
-      <aside className="eventDrawer taskEditor" role="dialog" aria-modal="true" aria-labelledby="task-editor-title">
+      <aside ref={dialogRef} className="eventDrawer taskEditor" role="dialog" aria-modal="true" aria-labelledby="task-editor-title">
         <header className="drawerHeader">
           <div><p className="eyebrow">{task.kind === "readLater" ? "Later Read" : "Flow task"}</p><h2 id="task-editor-title">Edit task</h2></div>
           <button className="iconButton" onClick={onClose} aria-label="Close task editor"><X /></button>

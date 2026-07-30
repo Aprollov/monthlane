@@ -39,7 +39,7 @@ export function DayPanel({
   if (!open) return null;
   const categoryById = (id?: string) => categories.find((category) => category.id === id);
   return (
-    <aside className="dayPanel" aria-label={`Details for ${longDateLabel(fromDateKey(date))}`}>
+    <aside className="dayPanel" role="dialog" aria-modal="false" aria-label={`Details for ${longDateLabel(fromDateKey(date))}`}>
       <header className="dayPanelHeader">
         <div><p className="eyebrow">Selected day</p><h2>{longDateLabel(fromDateKey(date))}</h2></div>
         <button className="iconButton" onClick={onClose} aria-label="Close day panel"><X /></button>

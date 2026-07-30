@@ -18,7 +18,7 @@ import { groupCalendarEntries } from "./flow/calendarEntries";
 import { inboxTasks, laterReadTasks, thisWeekTasks, todayTasks } from "./flow/taskFilters";
 import { taskRepository } from "./flow/taskRepository";
 import { changesForWrapUpAction, summarizeWrapUp, wrapUpSummaryText, wrapUpTasks, type WrapUpPlanItem } from "./flow/wrapUp";
-import { CalendarIcon, ChevronLeft, ChevronRight, Menu, Plus, Search, Settings, Sliders } from "./icons";
+import { CalendarIcon, ChevronLeft, ChevronRight, InboxIcon, Menu, Plus, Search, Settings, Sliders, Sun } from "./icons";
 import { expandEvents, previousDateKey } from "./recurrence";
 import type { CalendarEvent, Category, CreateTaskInput, EventDraft, FlowTask, RecurrenceException, TaskBucket, UpdateTaskInput } from "./types";
 
@@ -102,7 +102,21 @@ export function MonthlaneApp() {
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
-      if (target.matches("input, textarea, select") || target.isContentEditable) return;
+      if (event.key === "Escape") {
+        setSearchOpen(false);
+        setSettingsOpen(false);
+        setDrawerOpen(false);
+        setCaptureOpen(false);
+        setWrapUpOpen(false);
+        setDayPanelOpen(false);
+        setEditingTask(undefined);
+        return;
+      }
+      if (
+        target.matches("input, textarea, select") ||
+        target.isContentEditable ||
+        Boolean(target.closest("button, a, [role='button'], [role='dialog']"))
+      ) return;
       if (event.key.toLowerCase() === "n") openCreate();
       if (event.key.toLowerCase() === "q") openCapture({ bucket: "inbox" });
       if (event.key === "/") {
@@ -110,14 +124,6 @@ export function MonthlaneApp() {
         setSearchOpen(true);
       }
       if (event.key.toLowerCase() === "t") goToToday();
-      if (event.key === "Escape") {
-        setSearchOpen(false);
-        setSettingsOpen(false);
-        setDrawerOpen(false);
-        setCaptureOpen(false);
-        setWrapUpOpen(false);
-        setEditingTask(undefined);
-      }
       if (event.key === "ArrowLeft") setVisibleMonth((month) => addMonths(month, -1));
       if (event.key === "ArrowRight") setVisibleMonth((month) => addMonths(month, 1));
     };
@@ -385,7 +391,7 @@ export function MonthlaneApp() {
           <button className="secondaryButton todayButton" onClick={goToToday}>Today</button>
         </div> : <div className="flowTopTitle">Calendar + Flow</div>}
         <div className="topActions">
-          <button className="iconButton" onClick={() => setSearchOpen(true)} aria-label="Search events" title="Search events"><Search /></button>
+          <button className="iconButton" onClick={() => setSearchOpen(true)} aria-label="Search events and tasks" title="Search"><Search /></button>
           <button className="primaryButton newEventButton" onClick={() => activeView === "month"
             ? openCreate()
             : openCapture(captureDefaultsForView(activeView))}>
@@ -462,14 +468,24 @@ export function MonthlaneApp() {
                 <div
                   className={`dayCell ${outside ? "outsideMonth" : ""} ${selected ? "selectedDay" : ""}`}
                   key={key}
+                  data-day-cell
                   role="button"
                   tabIndex={0}
+                  aria-selected={selected}
                   aria-label={`${longDateLabel(date)}, ${dayEntries.length} ${dayEntries.length === 1 ? "item" : "items"}`}
                   onClick={() => { setSelectedDate(key); setDayPanelOpen(true); }}
                   onDoubleClick={() => openCreate(key)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") { setSelectedDate(key); setDayPanelOpen(true); }
                     if (event.key === "n") openCreate(key);
+                    const offsets: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+                    const offset = offsets[event.key];
+                    if (offset) {
+                      event.preventDefault();
+                      const cells = [...event.currentTarget.parentElement!.querySelectorAll<HTMLElement>("[data-day-cell]")];
+                      const target = cells[cells.indexOf(event.currentTarget) + offset];
+                      target?.focus();
+                    }
                   }}
                 >
                   <div className="dayNumberRow">
@@ -566,19 +582,30 @@ export function MonthlaneApp() {
       </div>
 
       <nav className="mobileBottomNav" aria-label="Primary navigation">
-        <button className={activeView === "month" ? "active" : ""} onClick={() => selectView("month")}><CalendarIcon /><span>Month</span></button>
-        <button className={activeView === "today" ? "active" : ""} onClick={() => selectView("today")}><CalendarIcon /><span>Today</span></button>
-        <button className={activeView === "inbox" ? "active" : ""} onClick={() => selectView("inbox")}><Sliders /><span>Inbox</span></button>
+        <button className={activeView === "month" ? "active" : ""} aria-current={activeView === "month" ? "page" : undefined} onClick={() => selectView("month")}><CalendarIcon /><span>Month</span></button>
+        <button className={activeView === "today" ? "active" : ""} aria-current={activeView === "today" ? "page" : undefined} onClick={() => selectView("today")}><Sun /><span>Today</span></button>
+        <button className={activeView === "inbox" ? "active" : ""} aria-current={activeView === "inbox" ? "page" : undefined} onClick={() => selectView("inbox")}><InboxIcon /><span>Inbox</span></button>
         <button className="mobileAdd" onClick={() => activeView === "month" ? openCreate() : openCapture(captureDefaultsForView(activeView))}><Plus /><span>Add</span></button>
         <button onClick={() => setSidebarOpen(true)}><Menu /><span>More</span></button>
       </nav>
 
       <EventDrawer open={drawerOpen} date={selectedDate} event={editingEvent} categories={categories} onClose={() => setDrawerOpen(false)} onSave={saveDraft} onDelete={editingEvent ? removeEvent : undefined} />
-      <SearchDrawer open={searchOpen} events={searchableEvents} categories={categories} onClose={() => setSearchOpen(false)} onSelect={(event) => {
+      <SearchDrawer open={searchOpen} events={searchableEvents} tasks={tasks} categories={categories} onClose={() => setSearchOpen(false)} onSelect={(event) => {
         setSelectedDate(event.startDate);
         setVisibleMonth(new Date(Number(event.startDate.slice(0, 4)), Number(event.startDate.slice(5, 7)) - 1, 1));
+        setActiveView("month");
         setSearchOpen(false);
-        notify(`Showing ${event.title}.`);
+        selectEvent(event);
+      }} onSelectTask={(task) => {
+        if (task.scheduledDate) {
+          setSelectedDate(task.scheduledDate);
+          setVisibleMonth(new Date(Number(task.scheduledDate.slice(0, 4)), Number(task.scheduledDate.slice(5, 7)) - 1, 1));
+          setActiveView("month");
+        } else {
+          setActiveView(task.kind === "readLater" ? "laterRead" : task.bucket === "thisWeek" ? "thisWeek" : "inbox");
+        }
+        setSearchOpen(false);
+        setEditingTask(task);
       }} />
       <QuickCapture open={captureOpen} defaults={captureDefaults} onClose={() => setCaptureOpen(false)} onCreate={createTask} />
       <TaskEditorDrawer

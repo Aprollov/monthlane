@@ -5,6 +5,7 @@ import { Archive, Check, X } from "../icons";
 import { fromDateKey, longDateLabel } from "../dates";
 import type { FlowTask } from "../types";
 import type { WrapUpAction, WrapUpPlanItem } from "./wrapUp";
+import { useDialogFocus } from "../useDialogFocus";
 
 type Props = {
   open: boolean;
@@ -18,6 +19,7 @@ type Props = {
 export function WrapUpDialog({ open, date, completed, unfinished, onClose, onApply }: Props) {
   const [actions, setActions] = useState<Record<string, WrapUpAction>>({});
   const [busy, setBusy] = useState(false);
+  const dialogRef = useDialogFocus<HTMLElement>(open, onClose);
 
   useEffect(() => {
     if (open) setActions(Object.fromEntries(unfinished.map((task) => [task.id, "keep"])));
@@ -35,7 +37,7 @@ export function WrapUpDialog({ open, date, completed, unfinished, onClose, onApp
 
   return (
     <div className="wrapUpScrim" role="presentation">
-      <section className="wrapUpDialog" role="dialog" aria-modal="true" aria-labelledby="wrap-up-title">
+      <section ref={dialogRef} className="wrapUpDialog" role="dialog" aria-modal="true" aria-labelledby="wrap-up-title">
         <header className="wrapUpHeader">
           <div><p className="eyebrow">Close the day gently</p><h2 id="wrap-up-title">Wrap up {longDateLabel(fromDateKey(date))}</h2></div>
           <button className="iconButton" onClick={onClose} aria-label="Close Wrap Up"><X /></button>

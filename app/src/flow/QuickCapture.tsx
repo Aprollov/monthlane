@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { InboxIcon, X } from "../icons";
 import type { CreateTaskInput } from "../types";
 import { captureInputFromText, findUrl } from "./urlDetection";
+import { useDialogFocus } from "../useDialogFocus";
 
 type Props = {
   open: boolean;
@@ -16,6 +17,7 @@ export function QuickCapture({ open, defaults, onClose, onCreate }: Props) {
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useDialogFocus<HTMLFormElement>(open, onClose, inputRef);
   useEffect(() => {
     if (open) window.setTimeout(() => inputRef.current?.focus(), 0);
   }, [open]);
@@ -23,7 +25,7 @@ export function QuickCapture({ open, defaults, onClose, onCreate }: Props) {
 
   return (
     <div className="captureScrim" role="presentation">
-      <form className="quickCapture" role="dialog" aria-modal="true" aria-labelledby="capture-title" onSubmit={async (event) => {
+      <form ref={dialogRef} className="quickCapture" role="dialog" aria-modal="true" aria-labelledby="capture-title" onSubmit={async (event) => {
         event.preventDefault();
         if (!title.trim()) return;
         setBusy(true);

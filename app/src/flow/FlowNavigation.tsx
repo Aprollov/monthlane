@@ -23,7 +23,7 @@ export function FlowNavigation({ activeView, counts, onSelect }: Props) {
       <div className="sectionTitle"><span>Flow</span><BookOpen /></div>
       <div className="flowNavList">
         {items.map(({ view, label, icon: Icon }) => (
-          <button className={activeView === view ? "active" : ""} key={view} onClick={() => onSelect(view)}>
+          <button className={activeView === view ? "active" : ""} aria-current={activeView === view ? "page" : undefined} key={view} onClick={() => onSelect(view)}>
             <Icon />
             <span>{label}</span>
             {view !== "completed" && <small>{counts[view]}</small>}

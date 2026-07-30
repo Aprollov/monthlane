@@ -5,6 +5,7 @@ import { signIn, signUp, synchronize, taskSyncSummaryText, type CloudConfig, typ
 import { exportBackup, importBackup } from "./database";
 import { X } from "./icons";
 import type { MonthlaneBackup } from "./types";
+import { useDialogFocus } from "./useDialogFocus";
 
 const CONFIG_KEY = "monthlane-cloud-config";
 const SESSION_KEY = "monthlane-cloud-session";
@@ -31,6 +32,7 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
   const [lastSync, setLastSync] = useState(() => localStorage.getItem(LAST_SYNC_KEY) ?? "");
   const fileInput = useRef<HTMLInputElement>(null);
   const replaceFileInput = useRef<HTMLInputElement>(null);
+  const dialogRef = useDialogFocus<HTMLElement>(open, onClose);
   if (!open) return null;
 
   const saveConfig = () => {
@@ -122,7 +124,7 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
   return (
     <>
       <button className="drawerScrim" onClick={onClose} aria-label="Close settings" />
-      <aside className="eventDrawer settingsDrawer" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <aside ref={dialogRef} className="eventDrawer settingsDrawer" role="dialog" aria-modal="true" aria-labelledby="settings-title">
         <header className="drawerHeader">
           <div><p className="eyebrow">Preferences & data</p><h2 id="settings-title">Settings</h2></div>
           <button className="iconButton" onClick={onClose} aria-label="Close settings"><X /></button>
