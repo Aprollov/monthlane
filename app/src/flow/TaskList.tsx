@@ -1,7 +1,6 @@
 "use client";
 
-import { Archive, ChevronDown, ChevronUp, MoreHorizontal, RotateCcw } from "../icons";
-import { fromDateKey, toDateKey } from "../dates";
+import { Archive, CalendarIcon, MoreHorizontal, RotateCcw } from "../icons";
 import type { Category, FlowTask, TaskBucket } from "../types";
 import { TaskCheckbox } from "./TaskCheckbox";
 
@@ -14,9 +13,15 @@ type Props = {
   onReopen: (task: FlowTask) => void;
   onArchive: (task: FlowTask) => void;
   onMove: (task: FlowTask, bucket: TaskBucket) => void;
+  onSchedule?: (task: FlowTask, date: string) => void;
+  onDelete: (task: FlowTask) => void;
   onReorder: (ids: string[]) => void;
   today: string;
   reorderable?: boolean;
+  onTaskDrop?: (taskId: string, targetIndex: number) => void;
+  onDragTaskChange?: (taskId?: string) => void;
+  onDragOverTask?: (index: number) => void;
+  dropIndex?: number;
 };
 
 export function TaskList({
@@ -28,18 +33,17 @@ export function TaskList({
   onReopen,
   onArchive,
   onMove,
+  onSchedule,
+  onDelete,
   onReorder,
   today,
   reorderable = true,
+  onTaskDrop,
+  onDragTaskChange,
+  onDragOverTask,
+  dropIndex,
 }: Props) {
   const categoryById = (id?: string) => categories.find((category) => category.id === id);
-  const moveAt = (index: number, direction: -1 | 1) => {
-    const target = index + direction;
-    if (target < 0 || target >= tasks.length) return;
-    const ids = tasks.map((task) => task.id);
-    [ids[index], ids[target]] = [ids[target], ids[index]];
-    onReorder(ids);
-  };
   if (!tasks.length) return <p className="emptyTaskList">{emptyMessage}</p>;
   return (
     <div className="taskList">
@@ -47,14 +51,28 @@ export function TaskList({
         const category = categoryById(task.categoryId);
         return (
           <article
-            className={`taskRow ${task.status === "completed" ? "completed" : ""}`}
+            className={`taskRow ${task.status === "completed" ? "completed" : ""} ${dropIndex === index ? "dropBefore" : ""}`}
             key={task.id}
             draggable={reorderable}
-            onDragStart={(event) => event.dataTransfer.setData("text/task-id", task.id)}
-            onDragOver={(event) => event.preventDefault()}
+            onDragStart={(event) => {
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData("text/task-id", task.id);
+              onDragTaskChange?.(task.id);
+            }}
+            onDragEnd={() => onDragTaskChange?.()}
+            onDragOver={(event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              onDragOverTask?.(index);
+            }}
             onDrop={(event) => {
               event.preventDefault();
+              event.stopPropagation();
               const sourceId = event.dataTransfer.getData("text/task-id");
+              if (onTaskDrop) {
+                onTaskDrop(sourceId, index);
+                return;
+              }
               const sourceIndex = tasks.findIndex((candidate) => candidate.id === sourceId);
               if (sourceIndex < 0 || sourceIndex === index) return;
               const ids = tasks.map((candidate) => candidate.id);
@@ -81,33 +99,23 @@ export function TaskList({
               </span>
             </button>
             <div className="taskRowActions">
-              {reorderable && <>
-                <button aria-label={`Move ${task.title} up`} disabled={index === 0} onClick={() => moveAt(index, -1)}><ChevronUp /></button>
-                <button aria-label={`Move ${task.title} down`} disabled={index === tasks.length - 1} onClick={() => moveAt(index, 1)}><ChevronDown /></button>
-              </>}
-              {task.status === "completed" ? (
-                <>
-                  <button aria-label={`Reopen ${task.title}`} onClick={() => onReopen(task)}><RotateCcw /></button>
-                  <button aria-label={`Archive ${task.title}`} onClick={() => onArchive(task)}><Archive /></button>
-                </>
-              ) : (
-                <label className="taskMoveMenu">
-                  <MoreHorizontal />
-                  <span className="visuallyHidden">Move {task.title}</span>
-                  <select aria-label={`Move ${task.title}`} defaultValue="" onChange={(event) => {
-                    const action = event.target.value;
-                    if (action === "today") onMove(task, "today");
-                    if (action === "week") onMove(task, "thisWeek");
-                    if (action === "inbox") onMove(task, "inbox");
-                    event.target.value = "";
-                  }}>
-                    <option value="" disabled>Move…</option>
-                    <option value="today">Today</option>
-                    <option value="week">This Week</option>
-                    <option value="inbox">Inbox</option>
-                  </select>
-                </label>
-              )}
+              <details className="taskMoreMenu">
+                <summary aria-label={`More actions for ${task.title}`} title="More actions"><MoreHorizontal /></summary>
+                <div className="taskMenuPanel">
+                  {task.status === "completed" ? <>
+                    <button type="button" onClick={() => onReopen(task)}><RotateCcw /> Reopen</button>
+                    <button type="button" onClick={() => onArchive(task)}><Archive /> Archive</button>
+                  </> : <>
+                    {task.bucket !== "inbox" && <button type="button" onClick={() => onMove(task, "inbox")}>Move to Inbox</button>}
+                    {task.bucket !== "thisWeek" && <button type="button" onClick={() => onMove(task, "thisWeek")}>Move to This Week</button>}
+                    {task.bucket !== "today" && <button type="button" onClick={() => onMove(task, "today")}>Move to Today</button>}
+                    {onSchedule && <label className="taskScheduleAction"><CalendarIcon /> Schedule<input type="date" aria-label={`Schedule ${task.title}`} value={task.scheduledDate ?? ""} onChange={(event) => event.target.value && onSchedule(task, event.target.value)} /></label>}
+                    <button type="button" onClick={() => onEdit(task)}>Edit</button>
+                    <button type="button" onClick={() => onComplete(task)}>Complete</button>
+                  </>}
+                  <button type="button" className="taskMenuDelete" onClick={() => onDelete(task)}>Delete</button>
+                </div>
+              </details>
             </div>
           </article>
         );

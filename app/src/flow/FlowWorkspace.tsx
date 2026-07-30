@@ -23,6 +23,9 @@ type Props = {
   onReopen: (task: FlowTask) => void;
   onArchive: (task: FlowTask) => void;
   onMove: (task: FlowTask, bucket: TaskBucket) => void;
+  onPlace: (taskId: string, bucket: FlowBucket, previousOrder?: number, nextOrder?: number) => void;
+  onSchedule: (task: FlowTask, date: string) => void;
+  onDelete: (task: FlowTask) => void;
   onReorder: (ids: string[]) => void;
 };
 
@@ -40,6 +43,9 @@ export function FlowWorkspace({
   onReopen,
   onArchive,
   onMove,
+  onPlace,
+  onSchedule,
+  onDelete,
   onReorder,
 }: Props) {
   if (view === "flow") return (
@@ -64,6 +70,9 @@ export function FlowWorkspace({
         onReopen={onReopen}
         onArchive={onArchive}
         onMove={onMove}
+        onPlace={onPlace}
+        onSchedule={onSchedule}
+        onDelete={onDelete}
         onReorder={onReorder}
       />
     </section>
@@ -88,7 +97,7 @@ export function FlowWorkspace({
       return !date || date < weekStartKey;
     }) },
   ].filter((group) => group.tasks.length);
-  const taskListProps = { categories, onEdit, onComplete, onReopen, onArchive, onMove, onReorder, today };
+  const taskListProps = { categories, onEdit, onComplete, onReopen, onArchive, onMove, onSchedule, onDelete, onReorder, today };
   return (
     <section className="flowWorkspace">
       <header className="flowHeader">

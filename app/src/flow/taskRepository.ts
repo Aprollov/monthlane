@@ -101,6 +101,13 @@ export const createTaskRepository = ({
     return updated;
   };
 
+  const orderBetween = (previous?: number, next?: number) => {
+    if (previous !== undefined && next !== undefined) return previous + (next - previous) / 2;
+    if (previous !== undefined) return previous + 1024;
+    if (next !== undefined) return next - 1024;
+    return 0;
+  };
+
   return {
     async createTask(input: CreateTaskInput) {
       const timestamp = now();
@@ -171,6 +178,22 @@ export const createTaskRepository = ({
     softDeleteTask: (id: string) => {
       const timestamp = now();
       return writeUpdate(id, { deletedAt: timestamp }, timestamp);
+    },
+    async placeTask(
+      id: string,
+      bucket: TaskBucket,
+      previousOrder?: number,
+      nextOrder?: number,
+    ) {
+      const existing = await requireTask(id);
+      const timestamp = now();
+      return writeUpdate(id, {
+        bucket,
+        sortOrder: orderBetween(previousOrder, nextOrder),
+        focusedAt: bucket === "today"
+          ? existing.focusedAt ?? timestamp
+          : undefined,
+      }, timestamp);
     },
     async reorderTasks(orderedIds: string[]) {
       const tasks = await Promise.all(orderedIds.map(requireTask));

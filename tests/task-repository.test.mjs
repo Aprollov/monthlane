@@ -24,7 +24,7 @@ const createHarness = () => {
     createId: () => `task-${++id}`,
     deviceId: () => "device-a",
   });
-  return { records, repository };
+  return { records, persistence, repository };
 };
 
 test("creates an inbox task with stable identity metadata", async () => {
@@ -109,4 +109,17 @@ test("rejects empty titles and missing task updates", async () => {
   const { repository } = createHarness();
   await assert.rejects(() => repository.createTask({ title: "   " }), /title is required/i);
   await assert.rejects(() => repository.updateTask("missing", { title: "Nope" }), /not found/i);
+});
+
+test("places one task between neighbors while preserving its scheduled date", async () => {
+  const { repository, persistence } = createHarness();
+  const first = await repository.createTask({ title: "First", bucket: "thisWeek", sortOrder: 100 });
+  const moved = await repository.createTask({ title: "Moved", bucket: "inbox", scheduledDate: "2026-08-08", sortOrder: 0 });
+  const last = await repository.createTask({ title: "Last", bucket: "thisWeek", sortOrder: 300 });
+  const placed = await repository.placeTask(moved.id, "thisWeek", first.sortOrder, last.sortOrder);
+  assert.equal(placed.bucket, "thisWeek");
+  assert.equal(placed.sortOrder, 200);
+  assert.equal(placed.scheduledDate, "2026-08-08");
+  assert.equal((await persistence.get(first.id))?.sortOrder, 100);
+  assert.equal((await persistence.get(last.id))?.sortOrder, 300);
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Category, CreateTaskInput, FlowBucket, FlowTask, TaskBucket } from "../types";
 import { inboxTasks, sortInbox, thisWeekTasks, todayTasks } from "./taskFilters";
 import { FlowColumnComposer } from "./FlowColumnComposer";
@@ -17,6 +18,9 @@ type Props = {
   onReopen: (task: FlowTask) => void;
   onArchive: (task: FlowTask) => void;
   onMove: (task: FlowTask, bucket: TaskBucket) => void;
+  onPlace: (taskId: string, bucket: FlowBucket, previousOrder?: number, nextOrder?: number) => void;
+  onSchedule: (task: FlowTask, date: string) => void;
+  onDelete: (task: FlowTask) => void;
   onReorder: (ids: string[]) => void;
 };
 
@@ -27,10 +31,19 @@ const columns: Array<{ bucket: FlowBucket; title: string }> = [
 ];
 
 export function FlowBoard(props: Props) {
+  const [draggingId, setDraggingId] = useState<string>();
+  const [dropTarget, setDropTarget] = useState<{ bucket: FlowBucket; index: number }>();
   const tasksByBucket: Record<FlowBucket, FlowTask[]> = {
     inbox: sortInbox(inboxTasks(props.tasks)),
     thisWeek: sortInbox(thisWeekTasks(props.tasks)),
     today: sortInbox(todayTasks(props.tasks, props.today)),
+  };
+  const place = (taskId: string, bucket: FlowBucket, requestedIndex: number) => {
+    const targetTasks = tasksByBucket[bucket].filter((task) => task.id !== taskId);
+    const index = Math.max(0, Math.min(requestedIndex, targetTasks.length));
+    props.onPlace(taskId, bucket, targetTasks[index - 1]?.sortOrder, targetTasks[index]?.sortOrder);
+    setDraggingId(undefined);
+    setDropTarget(undefined);
   };
   return (
     <>
@@ -41,7 +54,20 @@ export function FlowBoard(props: Props) {
         {columns.map((column) => {
           const columnTasks = tasksByBucket[column.bucket];
           return (
-            <section className={`flowColumn ${props.mobileBucket === column.bucket ? "mobileActive" : ""}`} key={column.bucket} aria-labelledby={`flow-${column.bucket}`}>
+            <section
+              className={`flowColumn ${props.mobileBucket === column.bucket ? "mobileActive" : ""} ${draggingId && dropTarget?.bucket === column.bucket ? "dropActive" : ""}`}
+              key={column.bucket}
+              aria-labelledby={`flow-${column.bucket}`}
+              onDragOver={(event) => {
+                event.preventDefault();
+                if (draggingId && dropTarget?.bucket !== column.bucket) setDropTarget({ bucket: column.bucket, index: columnTasks.length });
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                const taskId = event.dataTransfer.getData("text/task-id");
+                if (taskId) place(taskId, column.bucket, dropTarget?.bucket === column.bucket ? dropTarget.index : columnTasks.length);
+              }}
+            >
               <header className="flowColumnHeader">
                 <h2 id={`flow-${column.bucket}`}>{column.title}</h2>
                 <span>{columnTasks.length}</span>
@@ -56,7 +82,16 @@ export function FlowBoard(props: Props) {
                 onReopen={props.onReopen}
                 onArchive={props.onArchive}
                 onMove={props.onMove}
+                onSchedule={props.onSchedule}
+                onDelete={props.onDelete}
                 onReorder={props.onReorder}
+                onTaskDrop={(taskId, index) => place(taskId, column.bucket, index)}
+                onDragTaskChange={(taskId) => {
+                  setDraggingId(taskId);
+                  if (!taskId) setDropTarget(undefined);
+                }}
+                onDragOverTask={(index) => setDropTarget({ bucket: column.bucket, index })}
+                dropIndex={dropTarget?.bucket === column.bucket ? dropTarget.index : undefined}
                 today={props.today}
               />
             </section>

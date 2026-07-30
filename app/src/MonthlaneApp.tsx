@@ -348,6 +348,28 @@ export function MonthlaneApp() {
     notify(bucket === "inbox" ? "Moved to Inbox." : bucket === "today" ? "Moved to Today." : "Moved to This Week.");
   };
 
+  const placeTask = async (
+    taskId: string,
+    bucket: FlowBucket,
+    previousOrder?: number,
+    nextOrder?: number,
+  ) => {
+    await taskRepository.placeTask(taskId, bucket, previousOrder, nextOrder);
+    await refresh();
+  };
+
+  const scheduleTask = async (task: FlowTask, scheduledDate: string) => {
+    await taskRepository.updateTask(task.id, { scheduledDate });
+    await refresh();
+    notify(`Scheduled for ${scheduledDate}.`);
+  };
+
+  const deleteTask = async (task: FlowTask) => {
+    await taskRepository.softDeleteTask(task.id);
+    await refresh();
+    notify("Task deleted.");
+  };
+
   const finishWrapUp = async (plan: WrapUpPlanItem[]) => {
     const tomorrowDate = new Date(`${todayKey}T12:00:00`);
     tomorrowDate.setDate(tomorrowDate.getDate() + 1);
@@ -564,6 +586,9 @@ export function MonthlaneApp() {
           onReopen={async (task) => { await taskRepository.reopenTask(task.id); await refresh(); notify("Task reopened."); }}
           onArchive={async (task) => { await taskRepository.archiveTask(task.id); await refresh(); notify("Task archived."); }}
           onMove={(task, bucket) => void moveTask(task, bucket)}
+          onPlace={(taskId, bucket, previousOrder, nextOrder) => void placeTask(taskId, bucket, previousOrder, nextOrder)}
+          onSchedule={(task, date) => void scheduleTask(task, date)}
+          onDelete={(task) => void deleteTask(task)}
           onReorder={async (ids) => { await taskRepository.reorderTasks(ids); await refresh(); }}
         />}
       </div>

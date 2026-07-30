@@ -215,6 +215,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .flowSection, .weekProgress { max-width: 900px; margin: 0 auto; }
 .flowBoard { min-height: calc(100% - 125px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .flowColumn { min-width: 0; align-self: start; border: 1px solid var(--border); border-radius: 10px; background: rgb(253 253 251 / 62%); padding: 14px 13px 12px; transition: background 140ms ease, border-color 140ms ease; }
+.flowColumn.dropActive { border-color: var(--accent); background: var(--accent-soft); }
 .flowColumnHeader { height: 34px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .flowColumnHeader h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 17px; font-weight: 500; }
 .flowColumnHeader > span { min-width: 23px; height: 20px; display: grid; place-items: center; border-radius: 99px; background: var(--surface-secondary); color: var(--text-muted); font-size: 9px; }
@@ -246,6 +247,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .weekProgress small { color: var(--text-muted); font-size: 10px; }
 .taskList { border-top: 1px solid var(--border); }
 .taskRow { min-height: 52px; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); padding: 5px 4px; background: transparent; }
+.taskRow[draggable="true"] { cursor: grab; }
+.taskRow[draggable="true"]:active { cursor: grabbing; }
+.taskRow.dropBefore { box-shadow: inset 0 2px 0 var(--accent); }
 .taskRow:hover { background: rgb(233 233 227 / 45%); }
 .taskRow.completed .taskContent strong { text-decoration: line-through; color: var(--text-muted); }
 .taskCheckbox { width: 18px; height: 18px; display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: 5px; background: var(--surface); color: white; padding: 0; cursor: pointer; }
@@ -261,6 +265,16 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .taskRowActions > button:hover { background: var(--surface-hover); }
 .taskRowActions > button:disabled { opacity: .25; cursor: default; }
 .taskRowActions svg { width: 14px; height: 14px; }
+.taskMoreMenu { position: relative; }
+.taskMoreMenu > summary { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 6px; color: var(--text-secondary); cursor: pointer; list-style: none; }
+.taskMoreMenu > summary::-webkit-details-marker { display: none; }
+.taskMoreMenu > summary:hover, .taskMoreMenu[open] > summary { background: var(--surface-hover); color: var(--text-primary); }
+.taskMenuPanel { position: absolute; z-index: 25; top: calc(100% + 4px); right: 0; width: 188px; display: grid; gap: 2px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); box-shadow: var(--shadow-panel); padding: 6px; }
+.taskMenuPanel button, .taskScheduleAction { min-height: 32px; width: 100%; display: flex; align-items: center; gap: 8px; border: 0; border-radius: 6px; background: transparent; color: var(--text-secondary); padding: 0 9px; text-align: left; font: inherit; font-size: 10px; cursor: pointer; }
+.taskMenuPanel button:hover, .taskScheduleAction:hover { background: var(--surface-hover); color: var(--text-primary); }
+.taskMenuPanel svg { width: 13px; height: 13px; flex: 0 0 auto; }
+.taskScheduleAction input { min-width: 0; width: 102px; margin-left: auto; border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 9px; cursor: pointer; }
+.taskMenuPanel .taskMenuDelete { border-top: 1px solid var(--border); border-radius: 0 0 6px 6px; color: #a44c45; margin-top: 3px; padding-top: 3px; }
 .taskMoveMenu { position: relative; width: 29px; height: 29px; display: grid; place-items: center; }
 .taskMoveMenu select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
 .emptyTaskList { margin: 0; min-height: 150px; display: grid; place-items: center; border-top: 1px solid var(--border); color: var(--text-muted); font-family: Georgia, "Times New Roman", serif; font-size: 15px; }
