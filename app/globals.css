@@ -349,6 +349,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 @media (max-width: 720px) {
   body { background: var(--surface); }
+  input, textarea, select { font-size: 16px !important; }
   .mobileOnly { display: inline-grid; }
   .topBar { height: 58px; grid-template-columns: auto 1fr auto; border-bottom: 1px solid var(--border); padding: 0 8px; }
   .brandArea { gap: 2px; }
