@@ -1,4 +1,5 @@
 import type { FlowBucket, FlowTask } from "../types.ts";
+import { toDateKey } from "../dates.ts";
 
 const active = (task: FlowTask) => !task.deletedAt && task.status !== "archived";
 
@@ -21,6 +22,14 @@ export const unfinishedTasks = (tasks: FlowTask[], today: string) =>
 
 export const completedTasks = (tasks: FlowTask[]) =>
   tasks.filter((task) => !task.deletedAt && task.status === "completed");
+
+export const completedTasksForBucket = (tasks: FlowTask[], bucket: FlowBucket) =>
+  completedTasks(tasks).filter((task) => flowBucket(task) === bucket);
+
+export const isTodayCarryOver = (task: FlowTask, today: string) =>
+  flowBucket(task) === "today" &&
+  task.status === "open" &&
+  Boolean(task.focusedAt && toDateKey(new Date(task.focusedAt)) < today);
 
 export const laterReadTasks = (tasks: FlowTask[]) =>
   tasks.filter((task) => active(task) && task.status === "open" && task.kind === "readLater" && flowBucket(task) === "inbox");

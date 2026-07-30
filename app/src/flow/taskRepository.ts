@@ -134,6 +134,7 @@ export const createTaskRepository = ({
         completedAt: input.completedAt,
         archivedAt: input.archivedAt,
         deletedAt: input.deletedAt,
+        focusedAt: input.focusedAt ?? (input.bucket === "today" ? timestamp : undefined),
         createdAt: timestamp,
         updatedAt: timestamp,
         deviceId: deviceId(),

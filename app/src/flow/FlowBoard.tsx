@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Category, CreateTaskInput, FlowBucket, FlowTask, TaskBucket } from "../types";
-import { inboxTasks, sortInbox, thisWeekTasks, todayTasks } from "./taskFilters";
+import { completedTasksForBucket, inboxTasks, sortCompleted, sortInbox, thisWeekTasks, todayTasks } from "./taskFilters";
 import { FlowColumnComposer } from "./FlowColumnComposer";
 import { TaskList } from "./TaskList";
 
@@ -33,6 +33,7 @@ const columns: Array<{ bucket: FlowBucket; title: string }> = [
 export function FlowBoard(props: Props) {
   const [draggingId, setDraggingId] = useState<string>();
   const [dropTarget, setDropTarget] = useState<{ bucket: FlowBucket; index: number }>();
+  const [expandedCompleted, setExpandedCompleted] = useState<Partial<Record<FlowBucket, boolean>>>({});
   const tasksByBucket: Record<FlowBucket, FlowTask[]> = {
     inbox: sortInbox(inboxTasks(props.tasks)),
     thisWeek: sortInbox(thisWeekTasks(props.tasks)),
@@ -53,6 +54,9 @@ export function FlowBoard(props: Props) {
       <div className="flowBoard">
         {columns.map((column) => {
           const columnTasks = tasksByBucket[column.bucket];
+          const completed = sortCompleted(completedTasksForBucket(props.tasks, column.bucket));
+          const completedOpen = Boolean(expandedCompleted[column.bucket]);
+          const overCapacity = column.bucket === "today" && columnTasks.length > 6;
           return (
             <section
               className={`flowColumn ${props.mobileBucket === column.bucket ? "mobileActive" : ""} ${draggingId && dropTarget?.bucket === column.bucket ? "dropActive" : ""}`}
@@ -70,8 +74,9 @@ export function FlowBoard(props: Props) {
             >
               <header className="flowColumnHeader">
                 <h2 id={`flow-${column.bucket}`}>{column.title}</h2>
-                <span>{columnTasks.length}</span>
+                <span>{column.bucket === "today" ? `${columnTasks.length} / 6` : columnTasks.length}</span>
               </header>
+              {overCapacity && <p className="flowCapacityHint">今天已经安排了较多任务。</p>}
               <FlowColumnComposer bucket={column.bucket} onCreate={props.onCreate} />
               <TaskList
                 tasks={columnTasks}
@@ -94,6 +99,35 @@ export function FlowBoard(props: Props) {
                 dropIndex={dropTarget?.bucket === column.bucket ? dropTarget.index : undefined}
                 today={props.today}
               />
+              {completed.length > 0 && (
+                <section className="flowCompletedFold">
+                  <button
+                    type="button"
+                    aria-expanded={completedOpen}
+                    onClick={() => setExpandedCompleted((current) => ({ ...current, [column.bucket]: !current[column.bucket] }))}
+                  >
+                    <span>已完成</span>
+                    <small>{completed.length}</small>
+                  </button>
+                  {completedOpen && (
+                    <TaskList
+                      tasks={completed}
+                      categories={props.categories}
+                      emptyMessage=""
+                      onEdit={props.onEdit}
+                      onComplete={props.onComplete}
+                      onReopen={props.onReopen}
+                      onArchive={props.onArchive}
+                      onMove={props.onMove}
+                      onSchedule={props.onSchedule}
+                      onDelete={props.onDelete}
+                      onReorder={props.onReorder}
+                      reorderable={false}
+                      today={props.today}
+                    />
+                  )}
+                </section>
+              )}
             </section>
           );
         })}

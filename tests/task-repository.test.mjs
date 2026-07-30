@@ -40,6 +40,12 @@ test("creates an inbox task with stable identity metadata", async () => {
   assert.deepEqual(task.tags, []);
 });
 
+test("records when a task first enters Today", async () => {
+  const { repository } = createHarness();
+  const task = await repository.createTask({ title: "Focus", bucket: "today" });
+  assert.equal(task.focusedAt, task.createdAt);
+});
+
 test("updates a task while preserving id, createdAt, and deviceId", async () => {
   const { repository } = createHarness();
   const original = await repository.createTask({ title: "Draft" });

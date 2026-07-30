@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  completedTasksForBucket,
   completedTasks,
   inboxTasks,
+  isTodayCarryOver,
   laterReadTasks,
   sortCompleted,
   sortInbox,
@@ -66,6 +68,23 @@ test("Completed excludes deleted tasks", () => {
     task("2", { status: "completed", deletedAt: "2026-07-29" }),
   ];
   assert.deepEqual(completedTasks(tasks).map(({ id }) => id), ["1"]);
+});
+
+test("Completed tasks stay associated with their original Flow bucket", () => {
+  const tasks = [
+    task("1", { bucket: "inbox", status: "completed" }),
+    task("2", { bucket: "today", status: "completed" }),
+    task("3", { bucket: "laterRead", status: "completed" }),
+  ];
+  assert.deepEqual(completedTasksForBucket(tasks, "inbox").map(({ id }) => id), ["1", "3"]);
+  assert.deepEqual(completedTasksForBucket(tasks, "today").map(({ id }) => id), ["2"]);
+});
+
+test("Today carry-over requires an unfinished task focused before today", () => {
+  assert.equal(isTodayCarryOver(task("1", { bucket: "today", focusedAt: "2026-07-29T10:00:00Z" }), "2026-07-30"), true);
+  assert.equal(isTodayCarryOver(task("2", { bucket: "today", focusedAt: "2026-07-30T01:00:00Z" }), "2026-07-30"), false);
+  assert.equal(isTodayCarryOver(task("3", { bucket: "thisWeek", focusedAt: "2026-07-29T23:00:00Z" }), "2026-07-30"), false);
+  assert.equal(isTodayCarryOver(task("4", { bucket: "today", status: "completed", focusedAt: "2026-07-29T23:00:00Z" }), "2026-07-30"), false);
 });
 
 test("Later Read contains only open read-later links in its bucket", () => {

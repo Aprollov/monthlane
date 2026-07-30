@@ -219,6 +219,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .flowColumnHeader { height: 34px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .flowColumnHeader h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 17px; font-weight: 500; }
 .flowColumnHeader > span { min-width: 23px; height: 20px; display: grid; place-items: center; border-radius: 99px; background: var(--surface-secondary); color: var(--text-muted); font-size: 9px; }
+.flowCapacityHint { margin: -5px 0 8px; color: #956957; font-size: 9px; line-height: 1.4; }
 .flowComposer { min-height: 78px; margin: 5px 0 12px; padding-bottom: 11px; border-bottom: 1px solid var(--border); }
 .flowComposerInput { min-height: 39px; display: grid; grid-template-columns: minmax(0, 1fr) 32px; align-items: center; gap: 5px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 3px 4px 3px 10px; }
 .flowComposerInput:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
@@ -259,6 +260,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .taskTitleLine { min-width: 0; display: flex; align-items: center; gap: 7px; }
 .taskTitleLine strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
 .taskMeta { display: flex; flex-wrap: wrap; gap: 9px; color: var(--text-muted); font-size: 9px; }
+.carryOverBadge { border-radius: 99px; background: #f2ebe4; color: #8c604e; padding: 2px 6px; font-weight: 700; }
 .taskRowActions { display: flex; align-items: center; gap: 2px; opacity: .25; transition: opacity 120ms ease; }
 .taskRow:hover .taskRowActions, .taskRow:focus-within .taskRowActions { opacity: 1; }
 .taskRowActions > button { width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; display: grid; place-items: center; cursor: pointer; }
@@ -275,6 +277,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .taskMenuPanel svg { width: 13px; height: 13px; flex: 0 0 auto; }
 .taskScheduleAction input { min-width: 0; width: 102px; margin-left: auto; border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 9px; cursor: pointer; }
 .taskMenuPanel .taskMenuDelete { border-top: 1px solid var(--border); border-radius: 0 0 6px 6px; color: #a44c45; margin-top: 3px; padding-top: 3px; }
+.flowCompletedFold { margin-top: 10px; border-top: 1px solid var(--border); }
+.flowCompletedFold > button { width: 100%; min-height: 35px; display: flex; align-items: center; justify-content: space-between; border: 0; background: transparent; color: var(--text-muted); padding: 0 3px; font-size: 9px; font-weight: 700; letter-spacing: .05em; cursor: pointer; }
+.flowCompletedFold > button:hover { color: var(--text-secondary); }
+.flowCompletedFold > button small { min-width: 20px; height: 18px; display: grid; place-items: center; border-radius: 99px; background: var(--surface-secondary); font-size: 8px; }
+.flowCompletedFold .taskList { border-top: 1px solid var(--border); }
+.flowCompletedFold .taskRow { opacity: .72; }
 .taskMoveMenu { position: relative; width: 29px; height: 29px; display: grid; place-items: center; }
 .taskMoveMenu select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
 .emptyTaskList { margin: 0; min-height: 150px; display: grid; place-items: center; border-top: 1px solid var(--border); color: var(--text-muted); font-family: Georgia, "Times New Roman", serif; font-size: 15px; }
@@ -374,6 +382,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .flowBoard { display: block; min-height: 0; }
   .flowColumn { display: none; border: 0; padding: 8px 2px 0; background: transparent; }
   .flowColumn.mobileActive { display: block; }
+  .flowColumn .taskRow[draggable="true"] { touch-action: pan-y; }
+  .taskMoreMenu[open] .taskMenuPanel { position: fixed; z-index: 95; inset: auto 10px calc(78px + env(safe-area-inset-bottom)); width: auto; border-radius: 12px; padding: 8px; box-shadow: 0 -12px 38px rgb(45 46 42 / 16%); }
+  .taskMoreMenu[open] .taskMenuPanel button, .taskMoreMenu[open] .taskScheduleAction { min-height: 42px; font-size: 12px; padding-inline: 12px; }
+  .taskMoreMenu[open] .taskScheduleAction input { width: 132px; font-size: 11px; }
   .laterReadRow { grid-template-columns: 22px minmax(0, 1fr); }
   .laterReadActions { grid-column: 2; justify-content: flex-start; }
   .quickCapture { grid-template-columns: 34px minmax(0, 1fr) 38px; }

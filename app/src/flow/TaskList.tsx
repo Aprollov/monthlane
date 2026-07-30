@@ -2,6 +2,7 @@
 
 import { Archive, CalendarIcon, MoreHorizontal, RotateCcw } from "../icons";
 import type { Category, FlowTask, TaskBucket } from "../types";
+import { isTodayCarryOver } from "./taskFilters";
 import { TaskCheckbox } from "./TaskCheckbox";
 
 type Props = {
@@ -92,6 +93,7 @@ export function TaskList({
                 <strong>{task.title}</strong>
               </span>
               <span className="taskMeta">
+                {isTodayCarryOver(task, today) && <span className="carryOverBadge">昨日遗留</span>}
                 {task.scheduledTime && <span>{task.scheduledTime}</span>}
                 {task.scheduledDate && <span>{task.scheduledDate}</span>}
                 {task.dueDate && <span>Due {task.dueDate}</span>}
