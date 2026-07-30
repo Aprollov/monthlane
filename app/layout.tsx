@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: "Plan life, one month at a time. A calm, local-first personal calendar.",
   applicationName: "Monthlane",
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
+  icons: { icon: "/monthlane-icon.png", shortcut: "/monthlane-icon.png", apple: "/monthlane-icon.png" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

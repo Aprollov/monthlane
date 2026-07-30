@@ -390,7 +390,7 @@ export function MonthlaneApp() {
       <header className="topBar">
         <div className="brandArea">
           <button className="iconButton mobileOnly" onClick={() => setSidebarOpen(true)} aria-label="Open calendars" title="Open calendars"><Menu /></button>
-          <div className="brandMark" aria-hidden="true"><span>M</span></div>
+          <div className="brandMark" aria-hidden="true"><img src="./monthlane-icon.png" alt="" /></div>
           <div className="brandCopy"><strong>Monthlane</strong><span>Plan life, one month at a time.</span></div>
         </div>
         {activeView === "month" ? <div className="monthNavigation">
