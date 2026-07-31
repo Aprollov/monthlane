@@ -88,6 +88,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .dayCell:nth-last-child(-n + 7) { border-bottom: 0; }
 .dayCell:hover { background: #fafaf7; }
 .dayCell.selectedDay { background: var(--selected-background); box-shadow: inset 0 0 0 1px #cbd7cd; }
+.dayCell.dragDropTarget { background: #edf4ed; box-shadow: inset 0 0 0 1px #9fb6a4; }
 .outsideMonth { background: #f8f8f5; color: var(--text-muted); }
 .dayNumberRow { height: 25px; display: flex; align-items: flex-start; justify-content: space-between; font-size: 12px; font-weight: 600; }
 .todayNumber { width: 25px; height: 25px; display: grid; place-items: center; background: var(--today-background); border-radius: 50%; color: var(--accent); margin: -4px 0 0 -4px; }
@@ -106,6 +107,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .calendarTaskItem.completed .calendarTaskCheck { border-color: var(--accent); background: var(--accent); }
 .calendarTaskItem .eventTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .calendarTaskItem time { margin-left: auto; color: var(--text-muted); font-size: 9px; }
+.eventItem, .calendarTaskItem, .mobileEventRow { touch-action: pan-y; }
+.calendarDragSource { opacity: .34 !important; }
+.calendarDragging { user-select: none; cursor: grabbing; }
+.calendarDragging .eventItem, .calendarDragging .calendarTaskItem, .calendarDragging .mobileEventRow { cursor: grabbing; }
+.calendarDragPreview { position: fixed; top: 0; left: 0; z-index: 120; max-width: min(260px, calc(100vw - 30px)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; border: 1px solid #b8c8ba; border-radius: 7px; background: rgb(253 253 251 / 94%); color: var(--text-primary); padding: 8px 11px; font-size: 11px; box-shadow: 0 8px 22px rgb(45 55 46 / 15%); animation: toastIn 120ms ease-out; }
 .moreEvents { border: 0; background: transparent; color: var(--text-secondary); font-size: 10px; padding: 2px 4px; text-align: left; cursor: pointer; }
 .mobileDots, .mobileEventCount, .mobileOnly, .mobileBottomNav, .mobileDayList { display: none; }
 .dayPanel { position: fixed; inset: 68px 0 0 auto; z-index: 30; width: min(350px, calc(100vw - 260px)); overflow: auto; border-left: 1px solid var(--border); background: var(--surface); box-shadow: -12px 0 36px rgb(45 46 42 / 8%); padding: 25px 22px; animation: drawerIn 160ms ease-out; }
@@ -354,7 +360,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .readingWorkspace > .laterReadSection { max-width: 900px; margin: 0 auto; }
 .readingWorkspace .laterReadGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
 .readingWorkspace .laterReadCardContent { min-height: 160px; }
-.toast { position: fixed; right: 22px; bottom: 22px; z-index: 80; background: #30342f; color: white; border-radius: 8px; padding: 11px 15px; font-size: 12px; box-shadow: var(--shadow-panel); animation: toastIn 160ms ease-out; }
+.toast { position: fixed; right: 22px; bottom: 22px; z-index: 80; background: #30342f; color: white; border-radius: 8px; padding: 11px 15px; font-size: 12px; box-shadow: var(--shadow-panel); animation: toastIn 160ms ease-out; display: flex; align-items: center; gap: 4px; }
+.toast button { border: 0; background: transparent; color: #dbe8dc; padding: 0; font: inherit; font-weight: 700; cursor: pointer; }
+.toast button:hover { color: white; }
 .wrapUpScrim { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 22px; background: rgb(32 34 31 / 28%); }
 .wrapUpDialog { width: min(680px, 100%); max-height: min(760px, calc(100dvh - 44px)); overflow: auto; border-radius: 13px; background: var(--surface); box-shadow: var(--shadow-panel); padding: 26px 28px; animation: toastIn 160ms ease-out; }
 .wrapUpHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-bottom: 21px; border-bottom: 1px solid var(--border); }
@@ -468,7 +476,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .searchControls { grid-template-columns: 1fr; }
   .searchResult { grid-template-columns: 9px minmax(0, 1fr); }
   .searchResultMeta { display: none; }
-  .toast { right: 12px; left: 12px; bottom: calc(78px + env(safe-area-inset-bottom)); text-align: center; }
+  .toast { right: 12px; left: 12px; bottom: calc(78px + env(safe-area-inset-bottom)); justify-content: center; text-align: center; }
   .wrapUpScrim { align-items: end; padding: 0; }
   .wrapUpDialog { width: 100%; max-height: calc(100dvh - 28px); border-radius: 14px 14px 0 0; padding: 23px 18px calc(22px + env(safe-area-inset-bottom)); }
   .wrapUpHeader h2 { font-size: 22px; }

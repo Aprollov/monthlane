@@ -5,6 +5,8 @@ import { EventDrawer } from "./EventDrawer";
 import { SearchDrawer } from "./SearchDrawer";
 import { ScopeDialog, type RecurrenceScope } from "./ScopeDialog";
 import { SettingsDrawer } from "./SettingsDrawer";
+import { calendarDragItem, formatMovedDate, rescheduledEvent, type CalendarDragItem } from "./calendarReschedule";
+import { syncConnectedCloud } from "./cloudAutoSync";
 import { addMonths, buildMonthGrid, longDateLabel, monthLabel, toDateKey } from "./dates";
 import { ensureCategories, listCategories, listEvents, listExceptions, saveEvent, saveException, softDeleteEvent } from "./database";
 import { getDeviceId } from "./device";
@@ -21,6 +23,7 @@ import { BookOpen, CalendarIcon, ChevronLeft, ChevronRight, InboxIcon, Menu, Plu
 import { expandEvents, previousDateKey } from "./recurrence";
 import type { CalendarEvent, Category, CreateReadingItemInput, CreateTaskInput, EventDraft, FlowBucket, FlowTask, ReadingItem, RecurrenceException, TaskBucket, UpdateTaskInput } from "./types";
 import { openSmartLink } from "./flow/smartLinks";
+import { useCalendarDrag } from "./useCalendarDrag";
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -50,7 +53,7 @@ export function MonthlaneApp() {
   const [editingTask, setEditingTask] = useState<FlowTask>();
   const [editingEvent, setEditingEvent] = useState<CalendarEvent>();
   const [scopeRequest, setScopeRequest] = useState<{ action: "edit" | "delete"; draft?: EventDraft }>();
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState<{ message: string; actionLabel?: string; onAction?: () => void }>();
   const toastTimer = useRef<number | undefined>(undefined);
 
   const refresh = useCallback(async () => {
@@ -78,11 +81,11 @@ export function MonthlaneApp() {
     localStorage.setItem("monthlane-last-month", toDateKey(visibleMonth));
   }, [visibleMonth]);
 
-  const notify = (message: string) => {
-    setToast(message);
+  const notify = useCallback((message: string, action?: { label: string; run: () => void }) => {
+    setToast({ message, actionLabel: action?.label, onAction: action?.run });
     window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(""), 2600);
-  };
+    toastTimer.current = window.setTimeout(() => setToast(undefined), action ? 5200 : 2600);
+  }, []);
 
   const goToToday = useCallback(() => {
     setVisibleMonth(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -90,7 +93,7 @@ export function MonthlaneApp() {
     setSearchOpen(false);
     setDayPanelOpen(true);
     notify("Showing today.");
-  }, [today]);
+  }, [notify, today]);
 
   const openCreate = useCallback((date = selectedDate) => {
     setSelectedDate(date);
@@ -409,6 +412,47 @@ export function MonthlaneApp() {
     notify("Task deleted.");
   };
 
+  const persistCalendarDate = useCallback(async (item: CalendarDragItem, date: string) => {
+    if (item.type === "task") {
+      await taskRepository.updateTask(item.id, { scheduledDate: date });
+    } else {
+      const current = events.find((event) => event.id === item.id);
+      if (!current || current.recurrence) throw new Error("This event cannot be moved from the calendar.");
+      await saveEvent(rescheduledEvent(current, date, new Date().toISOString()));
+    }
+    await refresh();
+    void syncConnectedCloud()
+      .then((synced) => { if (synced) void refresh(); })
+      .catch(() => { /* The local move remains safely saved while offline. */ });
+  }, [events, refresh]);
+
+  const moveCalendarEntry = useCallback(async (item: CalendarDragItem, targetDate: string) => {
+    if (targetDate === item.sourceDate) return;
+    try {
+      await persistCalendarDate(item, targetDate);
+      notify(`Moved to ${formatMovedDate(targetDate)}`, {
+        label: "Undo",
+        run: () => {
+          window.clearTimeout(toastTimer.current);
+          setToast(undefined);
+          void persistCalendarDate({ ...item, sourceDate: targetDate }, item.sourceDate)
+            .then(() => notify(`Restored to ${formatMovedDate(item.sourceDate)}.`))
+            .catch(() => notify("Could not undo the move."));
+        },
+      });
+    } catch {
+      notify("Could not move this item.");
+    }
+  }, [notify, persistCalendarDate]);
+
+  const calendarDrag = useCalendarDrag({
+    onDrop: moveCalendarEntry,
+    onRecurringBlocked: useCallback(
+      () => notify("Open event details to reschedule a recurring event."),
+      [notify],
+    ),
+  });
+
   return (
     <main className="appShell">
       <header className="topBar">
@@ -501,14 +545,23 @@ export function MonthlaneApp() {
               const outside = date.getMonth() !== visibleMonth.getMonth();
               return (
                 <div
-                  className={`dayCell ${outside ? "outsideMonth" : ""} ${selected ? "selectedDay" : ""}`}
+                  className={`dayCell ${outside ? "outsideMonth" : ""} ${selected ? "selectedDay" : ""} ${calendarDrag.active?.targetDate === key ? "dragDropTarget" : ""}`}
                   key={key}
                   data-day-cell
+                  data-date-key={key}
                   role="button"
                   tabIndex={0}
                   aria-selected={selected}
                   aria-label={`${longDateLabel(date)}, ${dayEntries.length} ${dayEntries.length === 1 ? "item" : "items"}`}
-                  onClick={() => { setSelectedDate(key); setDayPanelOpen(true); }}
+                  onClick={(event) => {
+                    if (calendarDrag.suppressClick()) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      return;
+                    }
+                    setSelectedDate(key);
+                    setDayPanelOpen(true);
+                  }}
                   onDoubleClick={() => openCreate(key)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") { setSelectedDate(key); setDayPanelOpen(true); }
@@ -531,8 +584,19 @@ export function MonthlaneApp() {
                     {dayEntries.slice(0, 3).map((entry) => {
                       if (entry.type === "event") {
                         const category = categoryById(entry.event.categoryId);
+                        const dragItem = calendarDragItem(entry);
                         return (
-                          <button className="eventItem" key={entry.id} title={entry.event.title} onClick={(clickEvent) => {
+                          <button
+                            className={`eventItem ${calendarDrag.isSource(dragItem) ? "calendarDragSource" : ""}`}
+                            key={entry.id}
+                            title={entry.event.title}
+                            onPointerDown={(event) => calendarDrag.onPointerDown(event, dragItem)}
+                            onClick={(clickEvent) => {
+                            if (calendarDrag.suppressClick()) {
+                              clickEvent.preventDefault();
+                              clickEvent.stopPropagation();
+                              return;
+                            }
                             clickEvent.stopPropagation();
                             selectEvent(entry.event);
                           }}>
@@ -543,8 +607,19 @@ export function MonthlaneApp() {
                           </button>
                         );
                       }
+                      const dragItem = calendarDragItem(entry);
                       return (
-                        <button className={`calendarTaskItem ${entry.task.status === "completed" ? "completed" : ""}`} key={entry.id} title={entry.task.title} onClick={(clickEvent) => {
+                        <button
+                          className={`calendarTaskItem ${entry.task.status === "completed" ? "completed" : ""} ${calendarDrag.isSource(dragItem) ? "calendarDragSource" : ""}`}
+                          key={entry.id}
+                          title={entry.task.title}
+                          onPointerDown={(event) => calendarDrag.onPointerDown(event, dragItem)}
+                          onClick={(clickEvent) => {
+                          if (calendarDrag.suppressClick()) {
+                            clickEvent.preventDefault();
+                            clickEvent.stopPropagation();
+                            return;
+                          }
                           clickEvent.stopPropagation();
                           setEditingTask(entry.task);
                         }}>
@@ -570,13 +645,33 @@ export function MonthlaneApp() {
               <button className="iconButton" onClick={() => openCreate(selectedDate)} aria-label="Add event on selected day"><Plus /></button>
             </div>
             {selectedEntries.length ? selectedEntries.map((entry) => entry.type === "event" ? (
-              <button className="mobileEventRow" key={entry.id} onClick={() => selectEvent(entry.event)}>
+              <button
+                className={`mobileEventRow ${calendarDrag.isSource(calendarDragItem(entry)) ? "calendarDragSource" : ""}`}
+                key={entry.id}
+                onPointerDown={(event) => calendarDrag.onPointerDown(event, calendarDragItem(entry))}
+                onClick={(event) => {
+                  if (calendarDrag.suppressClick()) {
+                    event.preventDefault();
+                    return;
+                  }
+                  selectEvent(entry.event);
+                }}>
                 <span className="categoryDot" style={{ background: categoryById(entry.event.categoryId)?.color }} />
                 <span><strong>{entry.event.title}</strong><small>{entry.event.allDay ? "Event · All day" : `Event · ${entry.event.startTime}`}</small></span>
                 <ChevronRight />
               </button>
             ) : (
-              <button className={`mobileEventRow ${entry.task.status === "completed" ? "completed" : ""}`} key={entry.id} onClick={() => setEditingTask(entry.task)}>
+              <button
+                className={`mobileEventRow ${entry.task.status === "completed" ? "completed" : ""} ${calendarDrag.isSource(calendarDragItem(entry)) ? "calendarDragSource" : ""}`}
+                key={entry.id}
+                onPointerDown={(event) => calendarDrag.onPointerDown(event, calendarDragItem(entry))}
+                onClick={(event) => {
+                  if (calendarDrag.suppressClick()) {
+                    event.preventDefault();
+                    return;
+                  }
+                  setEditingTask(entry.task);
+                }}>
                 <span className="mobileTaskCheck">{entry.task.status === "completed" ? "✓" : ""}</span>
                 <span><strong>{entry.task.title}</strong><small>{entry.task.scheduledTime ? `Task · ${entry.task.scheduledTime}` : "Task · No time"}</small></span>
                 <ChevronRight />
@@ -669,7 +764,15 @@ export function MonthlaneApp() {
       />}
       <ScopeDialog open={Boolean(scopeRequest)} action={scopeRequest?.action ?? "edit"} onChoose={(scope) => void chooseScope(scope)} onClose={() => setScopeRequest(undefined)} />
       <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} onChanged={refresh} notify={notify} />
-      {toast && <div className="toast" role="status">{toast}</div>}
+      {calendarDrag.active && <div
+        className="calendarDragPreview"
+        style={{ transform: `translate3d(${calendarDrag.active.clientX + 12}px, ${calendarDrag.active.clientY + 12}px, 0)` }}
+        aria-hidden="true"
+      >{calendarDrag.active.item.title}</div>}
+      {toast && <div className="toast" role="status">
+        <span>{toast.message}</span>
+        {toast.actionLabel && toast.onAction && <button onClick={toast.onAction}>· {toast.actionLabel}</button>}
+      </div>}
     </main>
   );
 }

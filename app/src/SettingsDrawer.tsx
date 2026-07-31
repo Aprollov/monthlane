@@ -2,14 +2,11 @@
 
 import { useRef, useState } from "react";
 import { signIn, signUp, synchronize, taskSyncSummaryText, type CloudConfig, type CloudSession } from "./cloud";
+import { CLOUD_CONFIG_KEY, CLOUD_LAST_SYNC_KEY, CLOUD_SESSION_KEY } from "./cloudAutoSync";
 import { exportBackup, importBackup } from "./database";
 import { X } from "./icons";
 import type { MonthlaneBackup } from "./types";
 import { useDialogFocus } from "./useDialogFocus";
-
-const CONFIG_KEY = "monthlane-cloud-config";
-const SESSION_KEY = "monthlane-cloud-session";
-const LAST_SYNC_KEY = "monthlane-last-sync";
 
 const loadJson = <T,>(key: string): T | undefined => {
   try { return JSON.parse(localStorage.getItem(key) ?? "") as T; } catch { return undefined; }
@@ -23,20 +20,20 @@ type Props = {
 };
 
 export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
-  const [config, setConfig] = useState<CloudConfig>(() => loadJson<CloudConfig>(CONFIG_KEY) ?? { url: "", anonKey: "" });
-  const [session, setSession] = useState<CloudSession | undefined>(() => loadJson<CloudSession>(SESSION_KEY));
+  const [config, setConfig] = useState<CloudConfig>(() => loadJson<CloudConfig>(CLOUD_CONFIG_KEY) ?? { url: "", anonKey: "" });
+  const [session, setSession] = useState<CloudSession | undefined>(() => loadJson<CloudSession>(CLOUD_SESSION_KEY));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [lastSync, setLastSync] = useState(() => localStorage.getItem(LAST_SYNC_KEY) ?? "");
+  const [lastSync, setLastSync] = useState(() => localStorage.getItem(CLOUD_LAST_SYNC_KEY) ?? "");
   const fileInput = useRef<HTMLInputElement>(null);
   const replaceFileInput = useRef<HTMLInputElement>(null);
   const dialogRef = useDialogFocus<HTMLElement>(open, onClose);
   if (!open) return null;
 
   const saveConfig = () => {
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+    localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify(config));
     notify("Cloud settings saved.");
   };
 
@@ -77,18 +74,18 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
     setBusy(true);
     setError("");
     try {
-      localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+      localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify(config));
       if (mode === "signin") {
         const next = await signIn(config, email, password);
         setSession(next);
-        localStorage.setItem(SESSION_KEY, JSON.stringify(next));
+        localStorage.setItem(CLOUD_SESSION_KEY, JSON.stringify(next));
         notify("Signed in. You can sync now.");
       } else {
         const result = await signUp(config, email, password);
         if (result.needsConfirmation) notify("Check your email, confirm the account, then sign in.");
         else if (result.session) {
           setSession(result.session);
-          localStorage.setItem(SESSION_KEY, JSON.stringify(result.session));
+          localStorage.setItem(CLOUD_SESSION_KEY, JSON.stringify(result.session));
           notify("Account created.");
         }
       }
@@ -109,10 +106,10 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
       await importBackup(result.backup);
       await onChanged();
       setSession(result.session);
-      localStorage.setItem(SESSION_KEY, JSON.stringify(result.session));
+      localStorage.setItem(CLOUD_SESSION_KEY, JSON.stringify(result.session));
       const syncedAt = new Date().toISOString();
       setLastSync(syncedAt);
-      localStorage.setItem(LAST_SYNC_KEY, syncedAt);
+      localStorage.setItem(CLOUD_LAST_SYNC_KEY, syncedAt);
       notify(taskSyncSummaryText(result.summary));
     } catch (syncError) {
       setError(syncError instanceof Error ? syncError.message : "Sync failed.");
@@ -170,7 +167,7 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
                 <button className="primaryButton" disabled={busy} onClick={() => void syncNow()}>{busy ? "Syncing…" : "Sync now"}</button>
                 <button className="secondaryButton" onClick={() => {
                   setSession(undefined);
-                  localStorage.removeItem(SESSION_KEY);
+                  localStorage.removeItem(CLOUD_SESSION_KEY);
                   notify("Signed out.");
                 }}>Sign out</button>
               </div>
