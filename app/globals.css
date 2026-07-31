@@ -74,6 +74,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .sidebarNavButton svg, .flowNavList svg, .sidebarUtilities svg { width: 16px; height: 16px; }
 .flowNavigation { padding-bottom: 18px; }
 .flowNavList { display: grid; gap: 2px; }
+.flowSubnav { margin-left: 8px; padding-left: 7px; border-left: 1px solid var(--border); }
+.moduleNavigation { display: grid; gap: 3px; padding-top: 1px; border-top: 1px solid var(--border); }
 .flowNavList small { color: var(--text-muted); font-size: 10px; }
 .sidebarUtilities { display: grid; gap: 2px; padding: 12px 6px 0; border-top: 1px solid var(--border); }
 .statusDot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
@@ -220,16 +222,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .flowColumnHeader h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 17px; font-weight: 500; }
 .flowColumnHeader > span { min-width: 23px; height: 20px; display: grid; place-items: center; border-radius: 99px; background: var(--surface-secondary); color: var(--text-muted); font-size: 9px; }
 .flowCapacityHint { margin: -5px 0 8px; color: #956957; font-size: 9px; line-height: 1.4; }
-.flowComposer { min-height: 78px; margin: 5px 0 12px; padding-bottom: 11px; border-bottom: 1px solid var(--border); }
+.flowComposer { min-height: 52px; margin: 5px 0 12px; padding-bottom: 11px; border-bottom: 1px solid var(--border); }
 .flowComposerInput { min-height: 39px; display: grid; grid-template-columns: minmax(0, 1fr) 32px; align-items: center; gap: 5px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 3px 4px 3px 10px; }
 .flowComposerInput:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 .flowComposerInput input { min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text-primary); font-size: 11px; }
 .flowComposerInput button { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 6px; background: var(--accent); color: white; cursor: pointer; }
 .flowComposerInput button:disabled { opacity: .35; cursor: default; }
 .flowComposerInput svg { width: 14px; }
-.readLaterToggle { min-height: 27px; display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 9px; }
-.readLaterToggle input { width: 14px; height: 14px; accent-color: var(--accent); }
-.readLaterToggle small { margin-left: auto; color: var(--accent); }
 .flowColumn > .taskList { border-top: 0; }
 .flowColumn .taskRow { grid-template-columns: 20px minmax(0, 1fr) auto; padding-inline: 2px; }
 .flowColumn .taskRowActions > button { display: none; }
@@ -318,6 +317,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .laterReadCardTitle { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: var(--text-primary); font-family: Georgia, "Times New Roman", serif; font-size: 14px; line-height: 1.35; }
 .laterReadCardMeta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; color: var(--text-secondary); font-size: 9px; }
 .laterReadCardMeta > span { display: grid; gap: 2px; }
+.laterReadCardMeta .laterReadSource { grid-column: 1 / -1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .laterReadCardMeta small { color: var(--text-muted); font-size: 7px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
 .laterReadMenu { position: absolute; z-index: 12; top: 8px; right: 8px; }
 .laterReadMenu > summary { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 6px; color: var(--text-muted); cursor: pointer; list-style: none; }
@@ -340,6 +340,20 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .laterReadArchiveList strong { font-size: 10px; }
 .laterReadArchiveList small { color: var(--text-muted); font-size: 8px; }
 .laterReadArchiveList article > button:last-child { color: var(--accent); font-size: 8px; font-weight: 700; }
+.readingWorkspace { max-width: 1040px; margin: 0 auto; }
+.readingHeader { max-width: none; }
+.readingHeader > svg { width: 30px; height: 30px; color: var(--accent); }
+.readingCapture { max-width: 720px; display: grid; gap: 8px; margin: 0 auto 30px; }
+.readingCapture > label { color: var(--text-muted); font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.readingCapture > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.readingCapture input { min-width: 0; height: 42px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--text-primary); padding: 0 12px; font-size: 13px; outline: 0; }
+.readingCapture input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.readingCapture button { display: inline-flex; align-items: center; gap: 6px; }
+.readingCapture button svg { width: 14px; }
+.readingCapture > p { margin: 0; color: var(--danger); font-size: 10px; }
+.readingWorkspace > .laterReadSection { max-width: 900px; margin: 0 auto; }
+.readingWorkspace .laterReadGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+.readingWorkspace .laterReadCardContent { min-height: 160px; }
 .toast { position: fixed; right: 22px; bottom: 22px; z-index: 80; background: #30342f; color: white; border-radius: 8px; padding: 11px 15px; font-size: 12px; box-shadow: var(--shadow-panel); animation: toastIn 160ms ease-out; }
 .wrapUpScrim { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 22px; background: rgb(32 34 31 / 28%); }
 .wrapUpDialog { width: min(680px, 100%); max-height: min(760px, calc(100dvh - 44px)); overflow: auto; border-radius: 13px; background: var(--surface); box-shadow: var(--shadow-panel); padding: 26px 28px; animation: toastIn 160ms ease-out; }
@@ -437,12 +451,19 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .mobileEventRow.completed .mobileTaskCheck { border-color: var(--accent); background: var(--accent); }
   .dayPanel { display: block; inset: auto 0 0; z-index: 45; width: 100%; max-height: min(78dvh, 660px); border-left: 0; border-top: 1px solid var(--border-strong); border-radius: 15px 15px 0 0; padding: 22px 18px calc(82px + env(safe-area-inset-bottom)); box-shadow: 0 -16px 48px rgb(45 46 42 / 14%); }
   .clearDay { color: var(--text-muted); font-family: Georgia, "Times New Roman", serif; font-size: 14px; padding: 15px 0; margin: 0; border-top: 1px solid var(--border); }
-  .mobileBottomNav { position: fixed; z-index: 30; inset: auto 0 0; height: calc(68px + env(safe-area-inset-bottom)); padding: 6px 8px env(safe-area-inset-bottom); display: grid; grid-template-columns: repeat(5, 1fr); background: rgb(253 253 251 / 96%); border-top: 1px solid var(--border); }
+  .mobileBottomNav { position: fixed; z-index: 30; inset: auto 0 0; height: calc(68px + env(safe-area-inset-bottom)); padding: 6px 4px env(safe-area-inset-bottom); display: grid; grid-template-columns: repeat(6, 1fr); background: rgb(253 253 251 / 96%); border-top: 1px solid var(--border); }
   .mobileBottomNav button { border: 0; background: transparent; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 9px; }
   .mobileBottomNav button.active { color: var(--accent); font-weight: 700; }
   .mobileBottomNav .mobileAdd { color: var(--accent); font-weight: 700; }
   .mobileBottomNav .mobileAdd svg { background: var(--accent); color: white; border-radius: 9px; width: 34px; height: 30px; padding: 7px; }
   .eventDrawer { width: 100%; padding: 22px 20px calc(24px + env(safe-area-inset-bottom)); }
+  .readingWorkspace { height: auto; min-height: calc(100dvh - 58px); }
+  .readingHeader > svg { width: 26px; }
+  .readingCapture { margin-bottom: 22px; }
+  .readingCapture > div { grid-template-columns: 1fr; }
+  .readingCapture button { justify-content: center; }
+  .readingWorkspace .laterReadGrid { grid-template-columns: 1fr; }
+  .readingWorkspace .laterReadCardContent { min-height: 0; }
   .taskEditor { height: 100dvh; }
   .searchControls { grid-template-columns: 1fr; }
   .searchResult { grid-template-columns: 9px minmax(0, 1fr); }

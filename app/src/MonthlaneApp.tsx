@@ -12,11 +12,12 @@ import { FlowNavigation } from "./flow/FlowNavigation";
 import { FlowWorkspace, type FlowView } from "./flow/FlowWorkspace";
 import { DayPanel } from "./flow/DayPanel";
 import { QuickCapture } from "./flow/QuickCapture";
+import { ReadingWorkspace } from "./flow/ReadingWorkspace";
 import { TaskEditorDrawer } from "./flow/TaskEditorDrawer";
 import { groupCalendarEntries } from "./flow/calendarEntries";
 import { taskRepository } from "./flow/taskRepository";
 import { readingRepository } from "./flow/readingRepository";
-import { CalendarIcon, ChevronLeft, ChevronRight, InboxIcon, Menu, Plus, Search, Settings, Sliders, Sun } from "./icons";
+import { BookOpen, CalendarIcon, ChevronLeft, ChevronRight, InboxIcon, Menu, Plus, Search, Settings, Sliders, Sun } from "./icons";
 import { expandEvents, previousDateKey } from "./recurrence";
 import type { CalendarEvent, Category, CreateReadingItemInput, CreateTaskInput, EventDraft, FlowBucket, FlowTask, ReadingItem, RecurrenceException, TaskBucket, UpdateTaskInput } from "./types";
 import { openSmartLink } from "./flow/smartLinks";
@@ -318,6 +319,11 @@ export function MonthlaneApp() {
     setSidebarOpen(false);
   };
 
+  const selectFlowBucket = (bucket: FlowBucket) => {
+    setMobileFlowBucket(bucket);
+    selectView("flow");
+  };
+
   const captureDefaultsForView = (view: FlowView): Omit<CreateTaskInput, "title"> =>
     view === "flow" ? { bucket: mobileFlowBucket } : { bucket: "inbox" };
 
@@ -331,6 +337,32 @@ export function MonthlaneApp() {
     await readingRepository.create(input);
     await refresh();
     notify("Saved to Later Reading.");
+  };
+
+  const openReadingItem = async (item: ReadingItem) => {
+    if (item.readStatus === "unread") {
+      await readingRepository.update(item.id, { readStatus: "reading" });
+      await refresh();
+    }
+    openSmartLink(item);
+  };
+
+  const markReadingItemRead = async (item: ReadingItem) => {
+    await readingRepository.update(item.id, { readStatus: "completed" });
+    await refresh();
+    notify("Moved to reading archive.");
+  };
+
+  const deleteReadingItem = async (item: ReadingItem) => {
+    await readingRepository.update(item.id, { deletedAt: new Date().toISOString() });
+    await refresh();
+    notify("Reading item deleted.");
+  };
+
+  const restoreReadingItem = async (item: ReadingItem) => {
+    await readingRepository.update(item.id, { readStatus: "unread" });
+    await refresh();
+    notify("Returned to Read Later.");
   };
 
   const saveTask = async (id: string, changes: UpdateTaskInput) => {
@@ -390,13 +422,15 @@ export function MonthlaneApp() {
           <h1>{monthLabel(visibleMonth)}</h1>
           <button className="iconButton" onClick={() => setVisibleMonth((month) => addMonths(month, 1))} aria-label="Next month" title="Next month"><ChevronRight /></button>
           <button className="secondaryButton todayButton" onClick={goToToday}>Today</button>
-        </div> : <div className="flowTopTitle">Calendar + Flow</div>}
+        </div> : <div className="flowTopTitle">{activeView === "reading" ? "Read Later" : activeView === "completed" ? "Completed" : "Calendar + Flow"}</div>}
         <div className="topActions">
           <button className="iconButton" onClick={() => setSearchOpen(true)} aria-label="Search events and tasks" title="Search"><Search /></button>
           <button className="primaryButton newEventButton" onClick={() => activeView === "month"
             ? openCreate()
-            : openCapture(captureDefaultsForView(activeView))}>
-            <Plus /><span>{activeView === "month" ? "New event" : "Add task"}</span>
+            : activeView === "reading"
+              ? document.getElementById("reading-capture")?.focus()
+              : openCapture(captureDefaultsForView(activeView))}>
+            <Plus /><span>{activeView === "month" ? "New event" : activeView === "reading" ? "Add link" : "Add task"}</span>
           </button>
           <button className="iconButton" onClick={() => setSettingsOpen(true)} aria-label="Open settings" title="Settings"><Settings /></button>
         </div>
@@ -424,7 +458,7 @@ export function MonthlaneApp() {
             <div className="sectionTitle"><span>Calendar</span></div>
             <button className={`sidebarNavButton ${activeView === "month" ? "active" : ""}`} onClick={() => selectView("month")}><CalendarIcon /><span>Month</span></button>
           </section>
-          <FlowNavigation activeView={activeView} onSelect={selectView} />
+          <FlowNavigation activeView={activeView} activeBucket={mobileFlowBucket} onSelect={selectView} onSelectBucket={selectFlowBucket} />
           <section className="sidebarSection">
             <div className="sectionTitle"><span>Calendars</span><Sliders /></div>
             <div className="categoryList">
@@ -564,16 +598,22 @@ export function MonthlaneApp() {
             onReopenTask={async (task) => { await taskRepository.reopenTask(task.id); await refresh(); notify("Task reopened."); }}
             onReturnToInbox={(task) => void moveTask(task, "inbox")}
           />
-        </section> : <FlowWorkspace
+        </section> : activeView === "reading" ? <ReadingWorkspace
+          items={readingItems}
+          today={todayKey}
+          onCreate={createReadingItem}
+          onOpen={(item) => void openReadingItem(item)}
+          onMarkRead={(item) => void markReadingItemRead(item)}
+          onDelete={(item) => void deleteReadingItem(item)}
+          onRestore={(item) => void restoreReadingItem(item)}
+        /> : <FlowWorkspace
           view={activeView}
           tasks={tasks}
-          readingItems={readingItems}
           categories={categories}
           today={todayKey}
           mobileBucket={mobileFlowBucket}
           onMobileBucketChange={setMobileFlowBucket}
           onCreate={createTask}
-          onCreateReading={createReadingItem}
           onEdit={setEditingTask}
           onComplete={async (task) => { await taskRepository.completeTask(task.id); await refresh(); notify("Task completed."); }}
           onReopen={async (task) => { await taskRepository.reopenTask(task.id); await refresh(); notify("Task reopened."); }}
@@ -582,41 +622,6 @@ export function MonthlaneApp() {
           onPlace={(taskId, bucket, previousOrder, nextOrder) => void placeTask(taskId, bucket, previousOrder, nextOrder)}
           onSchedule={(task, date) => void scheduleTask(task, date)}
           onDelete={(task) => void deleteTask(task)}
-          onOpenReading={async (item) => {
-            if (item.readStatus === "unread") {
-              await readingRepository.update(item.id, { readStatus: "reading" });
-              await refresh();
-            }
-            openSmartLink(item);
-          }}
-          onMarkRead={async (item) => {
-            await readingRepository.update(item.id, { readStatus: "completed" });
-            await refresh();
-            notify("Moved to reading archive.");
-          }}
-          onDeleteReading={async (item) => {
-            await readingRepository.update(item.id, { deletedAt: new Date().toISOString() });
-            await refresh();
-            notify("Reading item deleted.");
-          }}
-          onConvertReading={async (item) => {
-            await taskRepository.createTask({
-              title: item.title,
-              notes: item.url,
-              kind: "task",
-              bucket: "inbox",
-              url: item.url,
-              siteName: item.platform,
-            });
-            await readingRepository.update(item.id, { deletedAt: new Date().toISOString() });
-            await refresh();
-            notify("Converted to Inbox task.");
-          }}
-          onRestoreReading={async (item) => {
-            await readingRepository.update(item.id, { readStatus: "unread" });
-            await refresh();
-            notify("Returned to Later Reading.");
-          }}
           onReorder={async (ids) => { await taskRepository.reorderTasks(ids); await refresh(); }}
         />}
       </div>
@@ -625,7 +630,12 @@ export function MonthlaneApp() {
         <button className={activeView === "month" ? "active" : ""} aria-current={activeView === "month" ? "page" : undefined} onClick={() => selectView("month")}><CalendarIcon /><span>Month</span></button>
         <button className={activeView === "flow" && mobileFlowBucket === "today" ? "active" : ""} aria-current={activeView === "flow" && mobileFlowBucket === "today" ? "page" : undefined} onClick={() => { setMobileFlowBucket("today"); selectView("flow"); }}><Sun /><span>Today</span></button>
         <button className={activeView === "flow" && mobileFlowBucket === "inbox" ? "active" : ""} aria-current={activeView === "flow" && mobileFlowBucket === "inbox" ? "page" : undefined} onClick={() => { setMobileFlowBucket("inbox"); selectView("flow"); }}><InboxIcon /><span>Inbox</span></button>
-        <button className="mobileAdd" onClick={() => activeView === "month" ? openCreate() : openCapture(captureDefaultsForView(activeView))}><Plus /><span>Add</span></button>
+        <button className={activeView === "reading" ? "active" : ""} aria-current={activeView === "reading" ? "page" : undefined} onClick={() => selectView("reading")}><BookOpen /><span>Reading</span></button>
+        <button className="mobileAdd" onClick={() => activeView === "month"
+          ? openCreate()
+          : activeView === "reading"
+            ? document.getElementById("reading-capture")?.focus()
+            : openCapture(captureDefaultsForView(activeView))}><Plus /><span>Add</span></button>
         <button onClick={() => setSidebarOpen(true)}><Menu /><span>More</span></button>
       </nav>
 

@@ -11,7 +11,6 @@ type Props = {
   onOpen: (item: ReadingItem) => void;
   onMarkRead: (item: ReadingItem) => void;
   onDelete: (item: ReadingItem) => void;
-  onConvertToTask: (item: ReadingItem) => void;
   onRestore: (item: ReadingItem) => void;
 };
 
@@ -24,7 +23,6 @@ function ReadingCard({
   onOpen,
   onMarkRead,
   onDelete,
-  onConvertToTask,
 }: Omit<Props, "items" | "archivedItems" | "onRestore"> & { item: ReadingItem }) {
   return (
     <article className="laterReadCard">
@@ -40,15 +38,15 @@ function ReadingCard({
         </span>
         <span className="laterReadCardTitle">{item.title}</span>
         <span className="laterReadCardMeta">
-          <span><small>Source</small>{item.platform}</span>
+          <span className="laterReadSource"><small>Source</small>{item.url}</span>
           <span><small>Added</small>{addedLabel(item, today).replace("Added ", "")}</span>
+          <span><small>Status</small>{item.readStatus === "reading" ? "Reading" : "Unread"}</span>
         </span>
       </button>
       <details className="laterReadMenu">
         <summary aria-label={`More actions for ${item.title}`}><MoreHorizontal /></summary>
         <div>
           <button type="button" onClick={() => onMarkRead(item)}>Mark as read</button>
-          <button type="button" onClick={() => onConvertToTask(item)}>Convert to task</button>
           <button className="danger" type="button" onClick={() => onDelete(item)}>Delete</button>
         </div>
       </details>
@@ -63,7 +61,6 @@ export function LaterReadList({
   onOpen,
   onMarkRead,
   onDelete,
-  onConvertToTask,
   onRestore,
 }: Props) {
   const [archiveOpen, setArchiveOpen] = useState(false);
@@ -86,7 +83,6 @@ export function LaterReadList({
               onOpen={onOpen}
               onMarkRead={onMarkRead}
               onDelete={onDelete}
-              onConvertToTask={onConvertToTask}
             />
           ))}
         </div>
