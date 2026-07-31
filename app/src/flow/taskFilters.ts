@@ -11,6 +11,9 @@ export const flowBucket = (task: FlowTask): FlowBucket => {
 export const inboxTasks = (tasks: FlowTask[]) =>
   tasks.filter((task) => active(task) && task.status === "open" && flowBucket(task) === "inbox");
 
+export const inboxActionTasks = (tasks: FlowTask[]) =>
+  inboxTasks(tasks).filter((task) => task.kind !== "readLater");
+
 export const thisWeekTasks = (tasks: FlowTask[]) =>
   tasks.filter((task) => active(task) && task.status === "open" && flowBucket(task) === "thisWeek");
 
@@ -31,9 +34,6 @@ export const isTodayCarryOver = (task: FlowTask, today: string) =>
   task.status === "open" &&
   Boolean(task.focusedAt && toDateKey(new Date(task.focusedAt)) < today);
 
-export const laterReadTasks = (tasks: FlowTask[]) =>
-  tasks.filter((task) => active(task) && task.status === "open" && task.kind === "readLater" && flowBucket(task) === "inbox");
-
 export const sortInbox = (tasks: FlowTask[]) =>
   [...tasks].sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt));
 
@@ -53,5 +53,3 @@ export const sortToday = (tasks: FlowTask[]) =>
 
 export const sortCompleted = (tasks: FlowTask[]) =>
   [...tasks].sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? ""));
-
-export const sortLaterRead = sortInbox;

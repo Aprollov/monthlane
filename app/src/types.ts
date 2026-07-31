@@ -72,6 +72,7 @@ export type MonthlaneBackupV2 = {
   updatedAt: string;
   events: CalendarEvent[];
   tasks: FlowTask[];
+  readingItems?: ReadingItem[];
   categories: Category[];
   exceptions: RecurrenceException[];
   settings?: Array<{ id: string; [key: string]: unknown }>;
@@ -85,6 +86,7 @@ export type MonthlaneBackup = MonthlaneBackupV1 | MonthlaneBackupV2;
 
 export type TaskKind = "task" | "readLater";
 export type TaskStatus = "open" | "completed" | "archived";
+export type ReadingStatus = "unread" | "reading" | "completed";
 export type FlowBucket = "inbox" | "thisWeek" | "today";
 export type LegacyTaskBucket = "laterRead" | "someday";
 export type TaskBucket = FlowBucket | LegacyTaskBucket;
@@ -117,6 +119,23 @@ export type FlowTask = {
   deletedAt?: string;
   deviceId: string;
 };
+
+export type ReadingItem = {
+  id: string;
+  url: string;
+  title: string;
+  platform: string;
+  platformIcon: string;
+  deepLink?: string;
+  readStatus: ReadingStatus;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+  deviceId: string;
+};
+
+export type CreateReadingItemInput = Pick<ReadingItem, "url" | "title" | "platform" | "platformIcon"> &
+  Partial<Pick<ReadingItem, "deepLink" | "readStatus" | "createdAt">>;
 
 export type CreateTaskInput = Pick<FlowTask, "title"> & Partial<Omit<
   FlowTask,

@@ -16,10 +16,12 @@ import { TaskEditorDrawer } from "./flow/TaskEditorDrawer";
 import { WrapUpDialog } from "./flow/WrapUpDialog";
 import { groupCalendarEntries } from "./flow/calendarEntries";
 import { taskRepository } from "./flow/taskRepository";
+import { readingRepository } from "./flow/readingRepository";
 import { changesForWrapUpAction, summarizeWrapUp, wrapUpSummaryText, wrapUpTasks, type WrapUpPlanItem } from "./flow/wrapUp";
 import { CalendarIcon, ChevronLeft, ChevronRight, InboxIcon, Menu, Plus, Search, Settings, Sliders, Sun } from "./icons";
 import { expandEvents, previousDateKey } from "./recurrence";
-import type { CalendarEvent, Category, CreateTaskInput, EventDraft, FlowBucket, FlowTask, RecurrenceException, TaskBucket, UpdateTaskInput } from "./types";
+import type { CalendarEvent, Category, CreateReadingItemInput, CreateTaskInput, EventDraft, FlowBucket, FlowTask, ReadingItem, RecurrenceException, TaskBucket, UpdateTaskInput } from "./types";
+import { openSmartLink } from "./flow/smartLinks";
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -31,6 +33,7 @@ export function MonthlaneApp() {
   const [exceptions, setExceptions] = useState<RecurrenceException[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tasks, setTasks] = useState<FlowTask[]>([]);
+  const [readingItems, setReadingItems] = useState<ReadingItem[]>([]);
   const [activeView, setActiveView] = useState<FlowView>("month");
   const [mobileFlowBucket, setMobileFlowBucket] = useState<FlowBucket>("today");
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(() => {
@@ -54,16 +57,19 @@ export function MonthlaneApp() {
 
   const refresh = useCallback(async () => {
     await ensureCategories();
-    const [storedEvents, storedCategories, storedExceptions, storedTasks] = await Promise.all([
+    await readingRepository.migrateLegacyTasks();
+    const [storedEvents, storedCategories, storedExceptions, storedTasks, storedReadingItems] = await Promise.all([
       listEvents(),
       listCategories(),
       listExceptions(),
       taskRepository.getAllTasks(),
+      readingRepository.getAll(),
     ]);
     setEvents(storedEvents);
     setCategories(storedCategories);
     setExceptions(storedExceptions);
     setTasks(storedTasks);
+    setReadingItems(storedReadingItems);
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
@@ -326,6 +332,12 @@ export function MonthlaneApp() {
     notify("Task captured.");
   };
 
+  const createReadingItem = async (input: CreateReadingItemInput) => {
+    await readingRepository.create(input);
+    await refresh();
+    notify("Saved to Later Reading.");
+  };
+
   const saveTask = async (id: string, changes: UpdateTaskInput) => {
     const current = tasks.find((task) => task.id === id);
     const { status, ...fields } = changes;
@@ -575,11 +587,13 @@ export function MonthlaneApp() {
         </section> : <FlowWorkspace
           view={activeView}
           tasks={tasks}
+          readingItems={readingItems}
           categories={categories}
           today={todayKey}
           mobileBucket={mobileFlowBucket}
           onMobileBucketChange={setMobileFlowBucket}
           onCreate={createTask}
+          onCreateReading={createReadingItem}
           onWrapUp={() => setWrapUpOpen(true)}
           onEdit={setEditingTask}
           onComplete={async (task) => { await taskRepository.completeTask(task.id); await refresh(); notify("Task completed."); }}
@@ -589,6 +603,41 @@ export function MonthlaneApp() {
           onPlace={(taskId, bucket, previousOrder, nextOrder) => void placeTask(taskId, bucket, previousOrder, nextOrder)}
           onSchedule={(task, date) => void scheduleTask(task, date)}
           onDelete={(task) => void deleteTask(task)}
+          onOpenReading={async (item) => {
+            if (item.readStatus === "unread") {
+              await readingRepository.update(item.id, { readStatus: "reading" });
+              await refresh();
+            }
+            openSmartLink(item);
+          }}
+          onMarkRead={async (item) => {
+            await readingRepository.update(item.id, { readStatus: "completed" });
+            await refresh();
+            notify("Moved to reading archive.");
+          }}
+          onDeleteReading={async (item) => {
+            await readingRepository.update(item.id, { deletedAt: new Date().toISOString() });
+            await refresh();
+            notify("Reading item deleted.");
+          }}
+          onConvertReading={async (item) => {
+            await taskRepository.createTask({
+              title: item.title,
+              notes: item.url,
+              kind: "task",
+              bucket: "inbox",
+              url: item.url,
+              siteName: item.platform,
+            });
+            await readingRepository.update(item.id, { deletedAt: new Date().toISOString() });
+            await refresh();
+            notify("Converted to Inbox task.");
+          }}
+          onRestoreReading={async (item) => {
+            await readingRepository.update(item.id, { readStatus: "unread" });
+            await refresh();
+            notify("Returned to Later Reading.");
+          }}
           onReorder={async (ids) => { await taskRepository.reorderTasks(ids); await refresh(); }}
         />}
       </div>
@@ -620,7 +669,7 @@ export function MonthlaneApp() {
         setSearchOpen(false);
         setEditingTask(task);
       }} />
-      <QuickCapture open={captureOpen} defaults={captureDefaults} onClose={() => setCaptureOpen(false)} onCreate={createTask} />
+      <QuickCapture open={captureOpen} defaults={captureDefaults} onClose={() => setCaptureOpen(false)} onCreate={createTask} onCreateReading={createReadingItem} />
       <TaskEditorDrawer
         open={Boolean(editingTask)}
         task={editingTask}

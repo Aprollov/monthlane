@@ -6,10 +6,8 @@ import {
   completedTasks,
   inboxTasks,
   isTodayCarryOver,
-  laterReadTasks,
   sortCompleted,
   sortInbox,
-  sortLaterRead,
   sortThisWeek,
   sortToday,
   thisWeekTasks,
@@ -85,19 +83,6 @@ test("Today carry-over requires an unfinished task focused before today", () => 
   assert.equal(isTodayCarryOver(task("2", { bucket: "today", focusedAt: "2026-07-30T01:00:00Z" }), "2026-07-30"), false);
   assert.equal(isTodayCarryOver(task("3", { bucket: "thisWeek", focusedAt: "2026-07-29T23:00:00Z" }), "2026-07-30"), false);
   assert.equal(isTodayCarryOver(task("4", { bucket: "today", status: "completed", focusedAt: "2026-07-29T23:00:00Z" }), "2026-07-30"), false);
-});
-
-test("Later Read contains only open read-later links in its bucket", () => {
-  const tasks = [
-    task("1", { kind: "readLater", bucket: "laterRead", url: "https://example.com" }),
-    task("2", { kind: "task", bucket: "laterRead" }),
-    task("3", { kind: "readLater", bucket: "laterRead", status: "completed" }),
-  ];
-  assert.deepEqual(laterReadTasks(tasks).map(({ id }) => id), ["1"]);
-  assert.deepEqual(sortLaterRead([
-    task("1", { sortOrder: 2 }),
-    task("2", { sortOrder: 1 }),
-  ]).map(({ id }) => id), ["2", "1"]);
 });
 
 test("sorters follow view-specific ordering", () => {

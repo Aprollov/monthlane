@@ -1,59 +1,116 @@
 "use client";
 
-import { CalendarCheck, ChevronRight } from "../icons";
-import type { Category, FlowTask } from "../types";
-import { TaskCheckbox } from "./TaskCheckbox";
+import { useState } from "react";
+import { MoreHorizontal } from "../icons";
+import type { ReadingItem } from "../types";
 
 type Props = {
-  tasks: FlowTask[];
-  categories: Category[];
+  items: ReadingItem[];
+  archivedItems: ReadingItem[];
   today: string;
-  onEdit: (task: FlowTask) => void;
-  onComplete: (task: FlowTask) => void;
-  onMoveToday: (task: FlowTask) => void;
-  onMoveThisWeek: (task: FlowTask) => void;
-  onSchedule: (task: FlowTask, date: string) => void;
+  onOpen: (item: ReadingItem) => void;
+  onMarkRead: (item: ReadingItem) => void;
+  onDelete: (item: ReadingItem) => void;
+  onConvertToTask: (item: ReadingItem) => void;
+  onRestore: (item: ReadingItem) => void;
 };
 
-export function LaterReadList({
-  tasks,
-  categories,
+const addedLabel = (item: ReadingItem, today: string) =>
+  item.createdAt.slice(0, 10) === today ? "Added today" : `Added ${item.createdAt.slice(0, 10)}`;
+
+function ReadingCard({
+  item,
   today,
-  onEdit,
-  onComplete,
-  onMoveToday,
-  onMoveThisWeek,
-  onSchedule,
-}: Props) {
-  const categoryById = (id?: string) => categories.find((category) => category.id === id);
-  if (!tasks.length) return <p className="emptyTaskList">Links saved for later will appear here.</p>;
+  onOpen,
+  onMarkRead,
+  onDelete,
+  onConvertToTask,
+}: Omit<Props, "items" | "archivedItems" | "onRestore"> & { item: ReadingItem }) {
   return (
-    <div className="laterReadList">
-      {tasks.map((task) => {
-        const category = categoryById(task.categoryId);
-        return (
-          <article className="laterReadRow" key={task.id}>
-            <TaskCheckbox checked={false} label={task.title} onChange={() => onComplete(task)} />
-            <button className="laterReadContent" onClick={() => onEdit(task)}>
-              <span className="laterReadTitle">
-                {category && <span className="categoryDot" style={{ background: category.color }} />}
-                <strong>{task.title}</strong>
-                <small>{task.siteName ?? "Web"}</small>
-              </span>
-              <span>{task.notes || task.url}</span>
-            </button>
-            <div className="laterReadActions">
-              {task.url && <a href={task.url} target="_blank" rel="noreferrer" aria-label={`Open ${task.title}`}><ChevronRight /></a>}
-              <button onClick={() => onMoveToday(task)} title="Move to Today">Today</button>
-              <button onClick={() => onMoveThisWeek(task)} title="Move to This Week"><CalendarCheck /></button>
-              <label>
-                <span className="visuallyHidden">Schedule {task.title}</span>
-                <input aria-label={`Schedule ${task.title}`} type="date" min={today} value={task.scheduledDate ?? ""} onChange={(event) => event.target.value && onSchedule(task, event.target.value)} />
-              </label>
+    <article className="laterReadCard">
+      <button
+        className="laterReadCardContent"
+        type="button"
+        onClick={() => onOpen(item)}
+        aria-label={`Open ${item.title}`}
+      >
+        <span className="laterReadPlatform">
+          <span aria-hidden="true">{item.platformIcon}</span>
+          <strong>{item.platform}</strong>
+        </span>
+        <span className="laterReadCardTitle">{item.title}</span>
+        <span className="laterReadCardMeta">
+          <span><small>Source</small>{item.platform}</span>
+          <span><small>Added</small>{addedLabel(item, today).replace("Added ", "")}</span>
+        </span>
+      </button>
+      <details className="laterReadMenu">
+        <summary aria-label={`More actions for ${item.title}`}><MoreHorizontal /></summary>
+        <div>
+          <button type="button" onClick={() => onMarkRead(item)}>Mark as read</button>
+          <button type="button" onClick={() => onConvertToTask(item)}>Convert to task</button>
+          <button className="danger" type="button" onClick={() => onDelete(item)}>Delete</button>
+        </div>
+      </details>
+    </article>
+  );
+}
+
+export function LaterReadList({
+  items,
+  archivedItems,
+  today,
+  onOpen,
+  onMarkRead,
+  onDelete,
+  onConvertToTask,
+  onRestore,
+}: Props) {
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  return (
+    <section className="laterReadSection" aria-labelledby="later-reading-title">
+      <header className="laterReadSectionHeader">
+        <div>
+          <p>Capture → Read → Archive</p>
+          <h3 id="later-reading-title">Later Reading</h3>
+        </div>
+        <span>{items.length}</span>
+      </header>
+      {items.length ? (
+        <div className="laterReadGrid">
+          {items.map((item) => (
+            <ReadingCard
+              key={item.id}
+              item={item}
+              today={today}
+              onOpen={onOpen}
+              onMarkRead={onMarkRead}
+              onDelete={onDelete}
+              onConvertToTask={onConvertToTask}
+            />
+          ))}
+        </div>
+      ) : <p className="laterReadEmpty">粘贴想稍后阅读的链接，它会安静地留在这里。</p>}
+      {archivedItems.length > 0 && (
+        <section className="laterReadArchive">
+          <button type="button" aria-expanded={archiveOpen} onClick={() => setArchiveOpen((current) => !current)}>
+            <span>Archive</span><small>{archivedItems.length}</small>
+          </button>
+          {archiveOpen && (
+            <div className="laterReadArchiveList">
+              {archivedItems.map((item) => (
+                <article key={item.id}>
+                  <span aria-hidden="true">{item.platformIcon}</span>
+                  <button type="button" onClick={() => onOpen(item)}>
+                    <strong>{item.title}</strong><small>{item.platform} · Read</small>
+                  </button>
+                  <button type="button" onClick={() => onRestore(item)}>Unread</button>
+                </article>
+              ))}
             </div>
-          </article>
-        );
-      })}
-    </div>
+          )}
+        </section>
+      )}
+    </section>
   );
 }

@@ -45,7 +45,7 @@ export function TaskList({
   dropIndex,
 }: Props) {
   const categoryById = (id?: string) => categories.find((category) => category.id === id);
-  if (!tasks.length) return <p className="emptyTaskList">{emptyMessage}</p>;
+  if (!tasks.length) return emptyMessage ? <p className="emptyTaskList">{emptyMessage}</p> : null;
   return (
     <div className="taskList">
       {tasks.map((task, index) => {

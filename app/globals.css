@@ -302,20 +302,44 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .captureInput small { color: var(--accent); font-size: 9px; }
 .taskEditor { width: min(470px, 100%); }
 .linkSourceHint { margin: -11px 0 0; color: var(--text-muted); font-size: 9px; line-height: 1.4; }
-.laterReadList { border-top: 1px solid var(--border); }
-.laterReadRow { min-height: 66px; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); padding: 7px 4px; }
-.laterReadRow:hover { background: rgb(233 233 227 / 45%); }
-.laterReadContent { min-width: 0; display: grid; gap: 5px; border: 0; background: transparent; padding: 6px 0; text-align: left; cursor: pointer; }
-.laterReadTitle { min-width: 0; display: flex; align-items: center; gap: 7px; }
-.laterReadTitle strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-.laterReadTitle small { flex: 0 0 auto; border-radius: 99px; background: var(--accent-soft); color: var(--accent); padding: 3px 6px; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
-.laterReadContent > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); font-size: 9px; }
-.laterReadActions { display: flex; align-items: center; gap: 3px; }
-.laterReadActions > a, .laterReadActions > button, .laterReadActions > label { width: 31px; height: 31px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer; text-decoration: none; font-size: 8px; }
-.laterReadActions > a:hover, .laterReadActions > button:hover, .laterReadActions > label:hover { background: var(--surface-hover); color: var(--accent); }
-.laterReadActions svg { width: 14px; }
-.laterReadActions label { position: relative; }
-.laterReadActions input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.laterReadSection { margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--border); }
+.laterReadSectionHeader { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
+.laterReadSectionHeader p { margin: 0 0 4px; color: var(--accent); font-size: 7px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.laterReadSectionHeader h3 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 16px; font-weight: 500; }
+.laterReadSectionHeader > span { min-width: 21px; height: 19px; display: grid; place-items: center; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-size: 8px; font-weight: 700; }
+.laterReadGrid { display: grid; gap: 8px; }
+.laterReadCard { position: relative; overflow: visible; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); }
+.laterReadCard:hover { border-color: var(--border-strong); }
+.laterReadCardContent { width: 100%; display: grid; gap: 10px; border: 0; border-radius: 9px; background: transparent; padding: 12px 42px 12px 12px; color: inherit; text-align: left; cursor: pointer; }
+.laterReadCardContent:hover { background: var(--surface-hover); }
+.laterReadPlatform { display: flex; align-items: center; gap: 7px; color: var(--accent); }
+.laterReadPlatform > span { font-size: 15px; line-height: 1; }
+.laterReadPlatform strong { font-size: 9px; letter-spacing: .03em; }
+.laterReadCardTitle { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: var(--text-primary); font-family: Georgia, "Times New Roman", serif; font-size: 14px; line-height: 1.35; }
+.laterReadCardMeta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; color: var(--text-secondary); font-size: 9px; }
+.laterReadCardMeta > span { display: grid; gap: 2px; }
+.laterReadCardMeta small { color: var(--text-muted); font-size: 7px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.laterReadMenu { position: absolute; z-index: 12; top: 8px; right: 8px; }
+.laterReadMenu > summary { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 6px; color: var(--text-muted); cursor: pointer; list-style: none; }
+.laterReadMenu > summary::-webkit-details-marker { display: none; }
+.laterReadMenu > summary:hover, .laterReadMenu[open] > summary { background: var(--surface-secondary); color: var(--text-primary); }
+.laterReadMenu svg { width: 14px; height: 14px; }
+.laterReadMenu > div { position: absolute; top: calc(100% + 4px); right: 0; width: 150px; display: grid; gap: 2px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow-panel); padding: 5px; }
+.laterReadMenu > div button { min-height: 31px; border: 0; border-radius: 5px; background: transparent; color: var(--text-secondary); padding: 0 8px; text-align: left; font: inherit; font-size: 9px; cursor: pointer; }
+.laterReadMenu > div button:hover { background: var(--surface-hover); color: var(--text-primary); }
+.laterReadMenu > div .danger { border-top: 1px solid var(--border); border-radius: 0 0 5px 5px; color: #a44c45; }
+.laterReadEmpty { margin: 0; border: 1px dashed var(--border); border-radius: 8px; color: var(--text-muted); padding: 20px 14px; font-family: Georgia, "Times New Roman", serif; font-size: 12px; line-height: 1.5; text-align: center; }
+.laterReadArchive { margin-top: 11px; border-top: 1px solid var(--border); }
+.laterReadArchive > button { width: 100%; min-height: 34px; display: flex; align-items: center; justify-content: space-between; border: 0; background: transparent; color: var(--text-muted); padding: 0 2px; font-size: 8px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+.laterReadArchive > button small { min-width: 19px; height: 17px; display: grid; place-items: center; border-radius: 99px; background: var(--surface-secondary); font-size: 8px; }
+.laterReadArchiveList { display: grid; }
+.laterReadArchiveList article { min-width: 0; display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 7px; border-top: 1px solid var(--border); padding: 7px 2px; opacity: .72; }
+.laterReadArchiveList article > button { min-width: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.laterReadArchiveList article > button:nth-child(2) { display: grid; gap: 3px; }
+.laterReadArchiveList strong, .laterReadArchiveList small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.laterReadArchiveList strong { font-size: 10px; }
+.laterReadArchiveList small { color: var(--text-muted); font-size: 8px; }
+.laterReadArchiveList article > button:last-child { color: var(--accent); font-size: 8px; font-weight: 700; }
 .toast { position: fixed; right: 22px; bottom: 22px; z-index: 80; background: #30342f; color: white; border-radius: 8px; padding: 11px 15px; font-size: 12px; box-shadow: var(--shadow-panel); animation: toastIn 160ms ease-out; }
 .wrapUpScrim { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 22px; background: rgb(32 34 31 / 28%); }
 .wrapUpDialog { width: min(680px, 100%); max-height: min(760px, calc(100dvh - 44px)); overflow: auto; border-radius: 13px; background: var(--surface); box-shadow: var(--shadow-panel); padding: 26px 28px; animation: toastIn 160ms ease-out; }
@@ -387,8 +411,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .taskMoreMenu[open] .taskMenuPanel { position: fixed; z-index: 95; inset: auto 10px calc(78px + env(safe-area-inset-bottom)); width: auto; border-radius: 12px; padding: 8px; box-shadow: 0 -12px 38px rgb(45 46 42 / 16%); }
   .taskMoreMenu[open] .taskMenuPanel button, .taskMoreMenu[open] .taskScheduleAction { min-height: 42px; font-size: 12px; padding-inline: 12px; }
   .taskMoreMenu[open] .taskScheduleAction input { width: 132px; font-size: 11px; }
-  .laterReadRow { grid-template-columns: 22px minmax(0, 1fr); }
-  .laterReadActions { grid-column: 2; justify-content: flex-start; }
+  .laterReadMenu > div button { min-height: 36px; font-size: 11px; }
   .quickCapture { grid-template-columns: 34px minmax(0, 1fr) 38px; }
   .quickCapture .primaryButton { display: none; }
   .weekdayRow { height: 25px; }

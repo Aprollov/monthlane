@@ -1,18 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import type { Category, CreateTaskInput, FlowBucket, FlowTask, TaskBucket } from "../types";
-import { completedTasksForBucket, inboxTasks, sortCompleted, sortInbox, thisWeekTasks, todayTasks } from "./taskFilters";
+import type { Category, CreateReadingItemInput, CreateTaskInput, FlowBucket, FlowTask, ReadingItem, TaskBucket } from "../types";
+import { completedTasksForBucket, inboxActionTasks, sortCompleted, sortInbox, thisWeekTasks, todayTasks } from "./taskFilters";
 import { FlowColumnComposer } from "./FlowColumnComposer";
+import { LaterReadList } from "./LaterReadList";
 import { TaskList } from "./TaskList";
 
 type Props = {
   tasks: FlowTask[];
+  readingItems: ReadingItem[];
   categories: Category[];
   today: string;
   mobileBucket: FlowBucket;
   onMobileBucketChange: (bucket: FlowBucket) => void;
   onCreate: (input: CreateTaskInput) => Promise<void>;
+  onCreateReading: (input: CreateReadingItemInput) => Promise<void>;
   onEdit: (task: FlowTask) => void;
   onComplete: (task: FlowTask) => void;
   onReopen: (task: FlowTask) => void;
@@ -21,6 +24,11 @@ type Props = {
   onPlace: (taskId: string, bucket: FlowBucket, previousOrder?: number, nextOrder?: number) => void;
   onSchedule: (task: FlowTask, date: string) => void;
   onDelete: (task: FlowTask) => void;
+  onOpenReading: (item: ReadingItem) => void;
+  onMarkRead: (item: ReadingItem) => void;
+  onDeleteReading: (item: ReadingItem) => void;
+  onConvertReading: (item: ReadingItem) => void;
+  onRestoreReading: (item: ReadingItem) => void;
   onReorder: (ids: string[]) => void;
 };
 
@@ -35,10 +43,16 @@ export function FlowBoard(props: Props) {
   const [dropTarget, setDropTarget] = useState<{ bucket: FlowBucket; index: number }>();
   const [expandedCompleted, setExpandedCompleted] = useState<Partial<Record<FlowBucket, boolean>>>({});
   const tasksByBucket: Record<FlowBucket, FlowTask[]> = {
-    inbox: sortInbox(inboxTasks(props.tasks)),
+    inbox: sortInbox(inboxActionTasks(props.tasks)),
     thisWeek: sortInbox(thisWeekTasks(props.tasks)),
     today: sortInbox(todayTasks(props.tasks, props.today)),
   };
+  const reading = [...props.readingItems]
+    .filter((item) => item.readStatus !== "completed")
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const readingArchive = [...props.readingItems]
+    .filter((item) => item.readStatus === "completed")
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const place = (taskId: string, bucket: FlowBucket, requestedIndex: number) => {
     const targetTasks = tasksByBucket[bucket].filter((task) => task.id !== taskId);
     const index = Math.max(0, Math.min(requestedIndex, targetTasks.length));
@@ -74,14 +88,14 @@ export function FlowBoard(props: Props) {
             >
               <header className="flowColumnHeader">
                 <h2 id={`flow-${column.bucket}`}>{column.title}</h2>
-                <span>{column.bucket === "today" ? `${columnTasks.length} / 6` : columnTasks.length}</span>
+                <span>{column.bucket === "today" ? `${columnTasks.length} / 6` : column.bucket === "inbox" ? columnTasks.length + reading.length : columnTasks.length}</span>
               </header>
               {overCapacity && <p className="flowCapacityHint">今天已经安排了较多任务。</p>}
-              <FlowColumnComposer bucket={column.bucket} onCreate={props.onCreate} />
+              <FlowColumnComposer bucket={column.bucket} onCreate={props.onCreate} onCreateReading={props.onCreateReading} />
               <TaskList
                 tasks={columnTasks}
                 categories={props.categories}
-                emptyMessage="暂无任务"
+                emptyMessage={column.bucket === "inbox" && reading.length ? "" : "暂无任务"}
                 onEdit={props.onEdit}
                 onComplete={props.onComplete}
                 onReopen={props.onReopen}
@@ -99,6 +113,18 @@ export function FlowBoard(props: Props) {
                 dropIndex={dropTarget?.bucket === column.bucket ? dropTarget.index : undefined}
                 today={props.today}
               />
+              {column.bucket === "inbox" && (
+                <LaterReadList
+                  items={reading}
+                  archivedItems={readingArchive}
+                  today={props.today}
+                  onOpen={props.onOpenReading}
+                  onMarkRead={props.onMarkRead}
+                  onDelete={props.onDeleteReading}
+                  onConvertToTask={props.onConvertReading}
+                  onRestore={props.onRestoreReading}
+                />
+              )}
               {completed.length > 0 && (
                 <section className="flowCompletedFold">
                   <button

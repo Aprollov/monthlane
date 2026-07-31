@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { InboxIcon, X } from "../icons";
-import type { CreateTaskInput } from "../types";
-import { captureInputFromText, findUrl } from "./urlDetection";
+import type { CreateReadingItemInput, CreateTaskInput } from "../types";
+import { captureInputFromText, captureReadingFromText, findUrl } from "./urlDetection";
 import { useDialogFocus } from "../useDialogFocus";
 
 type Props = {
@@ -11,9 +11,10 @@ type Props = {
   defaults: Omit<CreateTaskInput, "title">;
   onClose: () => void;
   onCreate: (input: CreateTaskInput) => Promise<void>;
+  onCreateReading: (input: CreateReadingItemInput) => Promise<void>;
 };
 
-export function QuickCapture({ open, defaults, onClose, onCreate }: Props) {
+export function QuickCapture({ open, defaults, onClose, onCreate, onCreateReading }: Props) {
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -30,7 +31,9 @@ export function QuickCapture({ open, defaults, onClose, onCreate }: Props) {
         if (!title.trim()) return;
         setBusy(true);
         try {
-          await onCreate(captureInputFromText(title, defaults));
+          const reading = defaults.bucket === "inbox" ? captureReadingFromText(title) : undefined;
+          if (reading) await onCreateReading(reading);
+          else await onCreate(captureInputFromText(title, defaults));
           setTitle("");
           onClose();
         } finally {

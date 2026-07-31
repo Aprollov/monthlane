@@ -2,7 +2,7 @@
 
 import { CheckCircle } from "../icons";
 import { fromDateKey, toDateKey } from "../dates";
-import type { Category, CreateTaskInput, FlowBucket, FlowTask, TaskBucket } from "../types";
+import type { Category, CreateReadingItemInput, CreateTaskInput, FlowBucket, FlowTask, ReadingItem, TaskBucket } from "../types";
 import { completedTasks, sortCompleted } from "./taskFilters";
 import { FlowBoard } from "./FlowBoard";
 import { TaskList } from "./TaskList";
@@ -12,11 +12,13 @@ export type FlowView = "month" | "flow" | "completed";
 type Props = {
   view: Exclude<FlowView, "month">;
   tasks: FlowTask[];
+  readingItems: ReadingItem[];
   categories: Category[];
   today: string;
   mobileBucket: FlowBucket;
   onMobileBucketChange: (bucket: FlowBucket) => void;
   onCreate: (input: CreateTaskInput) => Promise<void>;
+  onCreateReading: (input: CreateReadingItemInput) => Promise<void>;
   onWrapUp: () => void;
   onEdit: (task: FlowTask) => void;
   onComplete: (task: FlowTask) => void;
@@ -26,17 +28,24 @@ type Props = {
   onPlace: (taskId: string, bucket: FlowBucket, previousOrder?: number, nextOrder?: number) => void;
   onSchedule: (task: FlowTask, date: string) => void;
   onDelete: (task: FlowTask) => void;
+  onOpenReading: (item: ReadingItem) => void;
+  onMarkRead: (item: ReadingItem) => void;
+  onDeleteReading: (item: ReadingItem) => void;
+  onConvertReading: (item: ReadingItem) => void;
+  onRestoreReading: (item: ReadingItem) => void;
   onReorder: (ids: string[]) => void;
 };
 
 export function FlowWorkspace({
   view,
   tasks,
+  readingItems,
   categories,
   today,
   mobileBucket,
   onMobileBucketChange,
   onCreate,
+  onCreateReading,
   onWrapUp,
   onEdit,
   onComplete,
@@ -46,6 +55,11 @@ export function FlowWorkspace({
   onPlace,
   onSchedule,
   onDelete,
+  onOpenReading,
+  onMarkRead,
+  onDeleteReading,
+  onConvertReading,
+  onRestoreReading,
   onReorder,
 }: Props) {
   if (view === "flow") return (
@@ -60,11 +74,13 @@ export function FlowWorkspace({
       </header>
       <FlowBoard
         tasks={tasks}
+        readingItems={readingItems}
         categories={categories}
         today={today}
         mobileBucket={mobileBucket}
         onMobileBucketChange={onMobileBucketChange}
         onCreate={onCreate}
+        onCreateReading={onCreateReading}
         onEdit={onEdit}
         onComplete={onComplete}
         onReopen={onReopen}
@@ -73,6 +89,11 @@ export function FlowWorkspace({
         onPlace={onPlace}
         onSchedule={onSchedule}
         onDelete={onDelete}
+        onOpenReading={onOpenReading}
+        onMarkRead={onMarkRead}
+        onDeleteReading={onDeleteReading}
+        onConvertReading={onConvertReading}
+        onRestoreReading={onRestoreReading}
         onReorder={onReorder}
       />
     </section>

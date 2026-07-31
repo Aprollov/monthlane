@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { Plus } from "../icons";
-import type { CreateTaskInput, FlowBucket } from "../types";
-import { captureInputFromText, findUrl } from "./urlDetection";
+import type { CreateReadingItemInput, CreateTaskInput, FlowBucket } from "../types";
+import { captureInputFromText, captureReadingFromText, findUrl } from "./urlDetection";
 
 type Props = {
   bucket: FlowBucket;
   onCreate: (input: CreateTaskInput) => Promise<void>;
+  onCreateReading: (input: CreateReadingItemInput) => Promise<void>;
 };
 
 const placeholders: Record<FlowBucket, string> = {
@@ -16,7 +17,7 @@ const placeholders: Record<FlowBucket, string> = {
   today: "添加今天准备完成的任务……",
 };
 
-export function FlowColumnComposer({ bucket, onCreate }: Props) {
+export function FlowColumnComposer({ bucket, onCreate, onCreateReading }: Props) {
   const [value, setValue] = useState("");
   const [readLater, setReadLater] = useState(false);
   const [readLaterTouched, setReadLaterTouched] = useState(false);
@@ -29,10 +30,14 @@ export function FlowColumnComposer({ bucket, onCreate }: Props) {
       if (!value.trim()) return;
       setBusy(true);
       try {
-        const parsed = captureInputFromText(value, { bucket });
-        await onCreate(bucket === "inbox" && readLater
-          ? { ...parsed, bucket: "inbox", kind: "readLater" }
-          : { ...parsed, bucket, kind: bucket === "inbox" && readLater ? "readLater" : "task" });
+        if (bucket === "inbox" && readLater) {
+          const reading = captureReadingFromText(value);
+          if (!reading) return;
+          await onCreateReading(reading);
+        } else {
+          const parsed = captureInputFromText(value, { bucket });
+          await onCreate({ ...parsed, bucket, kind: "task" });
+        }
         setValue("");
         setReadLater(false);
         setReadLaterTouched(false);
@@ -51,7 +56,7 @@ export function FlowColumnComposer({ bucket, onCreate }: Props) {
             if (bucket === "inbox" && !readLaterTouched) setReadLater(Boolean(findUrl(next)));
           }}
         />
-        <button type="submit" disabled={busy || !value.trim()} aria-label={`Add to ${bucket}`} title="Add task"><Plus /></button>
+        <button type="submit" disabled={busy || !value.trim() || (readLater && !hasUrl)} aria-label={`Add to ${bucket}`} title="Add"><Plus /></button>
       </div>
       {bucket === "inbox" && (
         <label className="readLaterToggle">

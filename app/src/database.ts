@@ -5,12 +5,13 @@ import {
   type FlowTask,
   type MonthlaneBackup,
   type MonthlaneBackupV2,
+  type ReadingItem,
   type RecurrenceException,
 } from "./types.ts";
 import { getDeviceId } from "./device.ts";
 
 const DB_NAME = "monthlane";
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 const requestValue = <T,>(request: IDBRequest<T>) =>
   new Promise<T>((resolve, reject) => {
@@ -50,6 +51,12 @@ export const upgradeMonthlaneDb = (db: SchemaDatabase) => {
     tasks.createIndex("updatedAt", "updatedAt");
     tasks.createIndex("deletedAt", "deletedAt");
     tasks.createIndex("categoryId", "categoryId");
+  }
+  if (!db.objectStoreNames.contains("readingItems")) {
+    const readingItems = db.createObjectStore("readingItems", { keyPath: "id" });
+    readingItems.createIndex("readStatus", "readStatus");
+    readingItems.createIndex("updatedAt", "updatedAt");
+    readingItems.createIndex("deletedAt", "deletedAt");
   }
   if (!db.objectStoreNames.contains("settings")) {
     db.createObjectStore("settings", { keyPath: "id" });
@@ -131,10 +138,11 @@ export const softDeleteEvent = async (event: CalendarEvent) => {
 
 export const exportBackup = async (): Promise<MonthlaneBackupV2> => {
   const db = await openMonthlaneDb();
-  const tx = db.transaction(["events", "tasks", "categories", "recurrenceExceptions", "settings"]);
-  const [events, tasks, categories, exceptions, settings] = await Promise.all([
+  const tx = db.transaction(["events", "tasks", "readingItems", "categories", "recurrenceExceptions", "settings"]);
+  const [events, tasks, readingItems, categories, exceptions, settings] = await Promise.all([
     requestValue<CalendarEvent[]>(tx.objectStore("events").getAll()),
     requestValue<FlowTask[]>(tx.objectStore("tasks").getAll()),
+    requestValue<ReadingItem[]>(tx.objectStore("readingItems").getAll()),
     requestValue<Category[]>(tx.objectStore("categories").getAll()),
     requestValue<RecurrenceException[]>(tx.objectStore("recurrenceExceptions").getAll()),
     requestValue<Array<{ id: string; [key: string]: unknown }>>(tx.objectStore("settings").getAll()),
@@ -148,6 +156,7 @@ export const exportBackup = async (): Promise<MonthlaneBackupV2> => {
     updatedAt: timestamp,
     events,
     tasks,
+    readingItems,
     categories,
     exceptions,
     settings,
@@ -243,6 +252,7 @@ export const normalizeBackup = (backup: MonthlaneBackup): MonthlaneBackupV2 => {
     updatedAt?: string;
     events?: CalendarEvent[];
     tasks?: FlowTask[];
+    readingItems?: ReadingItem[];
     categories?: Category[];
     exceptions?: RecurrenceException[];
     settings?: Array<{ id: string; [key: string]: unknown }>;
@@ -267,6 +277,7 @@ export const normalizeBackup = (backup: MonthlaneBackup): MonthlaneBackupV2 => {
     tasks: version === 2 && Array.isArray(candidate.tasks)
       ? candidate.tasks.map((task, index) => normalizeFlowTask(task, exportedAt, index))
       : [],
+    readingItems: version === 2 && Array.isArray(candidate.readingItems) ? candidate.readingItems : [],
     categories: candidate.categories,
     exceptions: candidate.exceptions,
     settings: version === 2 && Array.isArray(candidate.settings) ? candidate.settings : [],
@@ -285,6 +296,7 @@ export const mergeBackups = (localInput: MonthlaneBackup, incomingInput: Monthla
     updatedAt: timestamp,
     events: newerRecords(local.events, incoming.events),
     tasks: mergeTasks(local.tasks, incoming.tasks),
+    readingItems: newerRecords(local.readingItems ?? [], incoming.readingItems ?? []),
     categories: newerRecords(local.categories, incoming.categories),
     exceptions: newerRecords(local.exceptions, incoming.exceptions),
     settings: incoming.updatedAt > local.updatedAt ? incoming.settings : local.settings,
@@ -305,11 +317,12 @@ export const importBackup = async (backup: MonthlaneBackup, mode: "merge" | "rep
   const normalized = normalizeBackup(backup);
   const merged = prepareBackupImport(await exportBackup(), normalized, mode);
   const db = await openMonthlaneDb();
-  const stores = ["events", "tasks", "categories", "recurrenceExceptions", "settings"];
+  const stores = ["events", "tasks", "readingItems", "categories", "recurrenceExceptions", "settings"];
   const tx = db.transaction(stores, "readwrite");
   if (mode === "replace") for (const store of stores) tx.objectStore(store).clear();
   for (const event of merged.events) tx.objectStore("events").put(event);
   for (const task of merged.tasks) tx.objectStore("tasks").put(task);
+  for (const readingItem of merged.readingItems ?? []) tx.objectStore("readingItems").put(readingItem);
   for (const category of merged.categories) tx.objectStore("categories").put(category);
   for (const exception of merged.exceptions) tx.objectStore("recurrenceExceptions").put(exception);
   for (const setting of merged.settings ?? []) tx.objectStore("settings").put(setting);
