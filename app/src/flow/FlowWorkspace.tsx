@@ -1,6 +1,5 @@
 "use client";
 
-import { CheckCircle } from "../icons";
 import { fromDateKey, toDateKey } from "../dates";
 import type { Category, CreateReadingItemInput, CreateTaskInput, FlowBucket, FlowTask, ReadingItem, TaskBucket } from "../types";
 import { completedTasks, sortCompleted } from "./taskFilters";
@@ -19,7 +18,6 @@ type Props = {
   onMobileBucketChange: (bucket: FlowBucket) => void;
   onCreate: (input: CreateTaskInput) => Promise<void>;
   onCreateReading: (input: CreateReadingItemInput) => Promise<void>;
-  onWrapUp: () => void;
   onEdit: (task: FlowTask) => void;
   onComplete: (task: FlowTask) => void;
   onReopen: (task: FlowTask) => void;
@@ -46,7 +44,6 @@ export function FlowWorkspace({
   onMobileBucketChange,
   onCreate,
   onCreateReading,
-  onWrapUp,
   onEdit,
   onComplete,
   onReopen,
@@ -70,7 +67,6 @@ export function FlowWorkspace({
           <h1>Flow</h1>
           <p>收集、推进、专注。三个状态平行存在，可以随时调整。</p>
         </div>
-        <button className="secondaryButton" onClick={onWrapUp}><CheckCircle /> Wrap up</button>
       </header>
       <FlowBoard
         tasks={tasks}

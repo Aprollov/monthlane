@@ -13,11 +13,9 @@ import { FlowWorkspace, type FlowView } from "./flow/FlowWorkspace";
 import { DayPanel } from "./flow/DayPanel";
 import { QuickCapture } from "./flow/QuickCapture";
 import { TaskEditorDrawer } from "./flow/TaskEditorDrawer";
-import { WrapUpDialog } from "./flow/WrapUpDialog";
 import { groupCalendarEntries } from "./flow/calendarEntries";
 import { taskRepository } from "./flow/taskRepository";
 import { readingRepository } from "./flow/readingRepository";
-import { changesForWrapUpAction, summarizeWrapUp, wrapUpSummaryText, wrapUpTasks, type WrapUpPlanItem } from "./flow/wrapUp";
 import { CalendarIcon, ChevronLeft, ChevronRight, InboxIcon, Menu, Plus, Search, Settings, Sliders, Sun } from "./icons";
 import { expandEvents, previousDateKey } from "./recurrence";
 import type { CalendarEvent, Category, CreateReadingItemInput, CreateTaskInput, EventDraft, FlowBucket, FlowTask, ReadingItem, RecurrenceException, TaskBucket, UpdateTaskInput } from "./types";
@@ -47,7 +45,6 @@ export function MonthlaneApp() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
   const [dayPanelOpen, setDayPanelOpen] = useState(false);
-  const [wrapUpOpen, setWrapUpOpen] = useState(false);
   const [captureDefaults, setCaptureDefaults] = useState<Omit<CreateTaskInput, "title">>({ bucket: "inbox" });
   const [editingTask, setEditingTask] = useState<FlowTask>();
   const [editingEvent, setEditingEvent] = useState<CalendarEvent>();
@@ -113,7 +110,6 @@ export function MonthlaneApp() {
         setSettingsOpen(false);
         setDrawerOpen(false);
         setCaptureOpen(false);
-        setWrapUpOpen(false);
         setDayPanelOpen(false);
         setEditingTask(undefined);
         return;
@@ -316,7 +312,6 @@ export function MonthlaneApp() {
       .filter((event) => !hiddenCategories.has(event.categoryId)),
     [events, exceptions, hiddenCategories, todayKey],
   );
-  const wrapUpGroups = useMemo(() => wrapUpTasks(tasks, todayKey), [tasks, todayKey]);
 
   const selectView = (view: FlowView) => {
     setActiveView(view);
@@ -380,21 +375,6 @@ export function MonthlaneApp() {
     await taskRepository.softDeleteTask(task.id);
     await refresh();
     notify("Task deleted.");
-  };
-
-  const finishWrapUp = async (plan: WrapUpPlanItem[]) => {
-    const tomorrowDate = new Date(`${todayKey}T12:00:00`);
-    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-    const tomorrow = toDateKey(tomorrowDate);
-    for (const item of plan) {
-      if (item.action === "keep") continue;
-      if (item.action === "archive") await taskRepository.archiveTask(item.task.id);
-      else await taskRepository.updateTask(item.task.id, changesForWrapUpAction(item.action, tomorrow));
-    }
-    const summary = summarizeWrapUp(wrapUpGroups.completed.length, plan);
-    await refresh();
-    setWrapUpOpen(false);
-    notify(wrapUpSummaryText(summary));
   };
 
   return (
@@ -594,7 +574,6 @@ export function MonthlaneApp() {
           onMobileBucketChange={setMobileFlowBucket}
           onCreate={createTask}
           onCreateReading={createReadingItem}
-          onWrapUp={() => setWrapUpOpen(true)}
           onEdit={setEditingTask}
           onComplete={async (task) => { await taskRepository.completeTask(task.id); await refresh(); notify("Task completed."); }}
           onReopen={async (task) => { await taskRepository.reopenTask(task.id); await refresh(); notify("Task reopened."); }}
@@ -678,14 +657,6 @@ export function MonthlaneApp() {
         onSave={saveTask}
         onDelete={async (id) => { await taskRepository.softDeleteTask(id); await refresh(); notify("Task deleted."); }}
       />}
-      <WrapUpDialog
-        open={wrapUpOpen}
-        date={todayKey}
-        completed={wrapUpGroups.completed}
-        unfinished={wrapUpGroups.unfinished}
-        onClose={() => setWrapUpOpen(false)}
-        onApply={finishWrapUp}
-      />
       <ScopeDialog open={Boolean(scopeRequest)} action={scopeRequest?.action ?? "edit"} onChoose={(scope) => void chooseScope(scope)} onClose={() => setScopeRequest(undefined)} />
       <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} onChanged={refresh} notify={notify} />
       {toast && <div className="toast" role="status">{toast}</div>}
