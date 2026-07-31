@@ -1,77 +1,60 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { X } from "../icons";
 import type { Category, FlowTask, TaskBucket, TaskStatus, UpdateTaskInput } from "../types";
-import { detectLinkSource } from "./urlDetection";
 import { useDialogFocus } from "../useDialogFocus";
 import { flowBucket } from "./taskFilters";
 
 type Props = {
-  open: boolean;
-  task?: FlowTask;
+  task: FlowTask;
   categories: Category[];
   onClose: () => void;
   onSave: (id: string, changes: UpdateTaskInput) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 };
 
-export function TaskEditorDrawer({ open, task, categories, onClose, onSave, onDelete }: Props) {
-  const [draft, setDraft] = useState<UpdateTaskInput>({});
-  const [more, setMore] = useState(false);
+const draftFromTask = (task: FlowTask): UpdateTaskInput => ({
+  title: task.title,
+  notes: task.notes,
+  bucket: flowBucket(task),
+  scheduledDate: task.scheduledDate,
+  scheduledTime: task.scheduledTime,
+  dueDate: task.dueDate,
+  categoryId: task.categoryId,
+  tags: task.tags,
+  estimatedMinutes: task.estimatedMinutes,
+  status: task.status,
+});
+
+export function TaskEditorDrawer({ task, categories, onClose, onSave, onDelete }: Props) {
+  const [draft, setDraft] = useState<UpdateTaskInput>(() => draftFromTask(task));
+  const [more, setMore] = useState(() => Boolean(task.dueDate || task.tags.length || task.estimatedMinutes));
   const [busy, setBusy] = useState(false);
-  const dialogRef = useDialogFocus<HTMLElement>(open, onClose);
-  useEffect(() => {
-    if (!task) return;
-    setDraft({
-      title: task.title,
-      notes: task.notes,
-      bucket: flowBucket(task),
-      scheduledDate: task.scheduledDate,
-      scheduledTime: task.scheduledTime,
-      dueDate: task.dueDate,
-      categoryId: task.categoryId,
-      tags: task.tags,
-      estimatedMinutes: task.estimatedMinutes,
-      status: task.status,
-      kind: task.kind,
-      url: task.url,
-      sourceType: task.sourceType,
-      siteName: task.siteName,
-      pageTitle: task.pageTitle,
-    });
-    setMore(Boolean(task.dueDate || task.tags.length || task.estimatedMinutes));
-  }, [task]);
-  if (!open || !task) return null;
+  const closeEditor = useCallback(() => {
+    setBusy(false);
+    setMore(false);
+    setDraft({});
+    onClose();
+  }, [onClose]);
+  const dialogRef = useDialogFocus<HTMLElement>(true, closeEditor);
 
   return (
     <>
-      <button className="drawerScrim" onClick={onClose} aria-label="Close task editor" />
+      <button type="button" className="drawerScrim" onClick={closeEditor} aria-label="Close task editor" />
       <aside ref={dialogRef} className="eventDrawer taskEditor" role="dialog" aria-modal="true" aria-labelledby="task-editor-title">
         <header className="drawerHeader">
-          <div><p className="eyebrow">{task.kind === "readLater" ? "Later Read" : "Flow task"}</p><h2 id="task-editor-title">Edit task</h2></div>
-          <button className="iconButton" onClick={onClose} aria-label="Close task editor"><X /></button>
+          <div><p className="eyebrow">Flow task</p><h2 id="task-editor-title">Edit task</h2></div>
+          <button type="button" className="iconButton" onClick={closeEditor} aria-label="Close task editor"><X /></button>
         </header>
         <form className="eventForm" onSubmit={async (event) => {
           event.preventDefault();
           setBusy(true);
-          try { await onSave(task.id, draft); onClose(); }
+          try { await onSave(task.id, draft); closeEditor(); }
           finally { setBusy(false); }
         }}>
           <label>Title<input required value={draft.title ?? ""} onChange={(event) => setDraft({ ...draft, title: event.target.value })} /></label>
           <label>Notes<textarea rows={4} value={draft.notes ?? ""} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} /></label>
-          {task.kind === "readLater" && <>
-            <label>Link<input type="url" value={draft.url ?? ""} onChange={(event) => {
-              const source = detectLinkSource(event.target.value);
-              setDraft({
-                ...draft,
-                url: event.target.value || undefined,
-                sourceType: source?.sourceType,
-                siteName: source?.siteName,
-              });
-            }} /></label>
-            <p className="linkSourceHint">{draft.siteName ?? "Web link"} · Titles remain editable when metadata is unavailable.</p>
-          </>}
           <div className="formSplit">
             <label>Bucket<select value={draft.bucket ?? "inbox"} onChange={(event) => setDraft({ ...draft, bucket: event.target.value as TaskBucket })}>
               <option value="inbox">Inbox</option>
@@ -101,8 +84,12 @@ export function TaskEditorDrawer({ open, task, categories, onClose, onSave, onDe
             <label>Tags<input value={(draft.tags ?? []).join(", ")} onChange={(event) => setDraft({ ...draft, tags: event.target.value.split(",").map((tag) => tag.trim()).filter(Boolean) })} placeholder="work, follow-up" /></label>
           </>}
           <div className="drawerActions">
-            <button className="dangerButton" type="button" onClick={async () => { await onDelete(task.id); onClose(); }}>Delete</button>
-            <button className="secondaryButton" type="button" onClick={onClose}>Cancel</button>
+            <button className="dangerButton" type="button" disabled={busy} onClick={async () => {
+              setBusy(true);
+              try { await onDelete(task.id); closeEditor(); }
+              finally { setBusy(false); }
+            }}>Delete</button>
+            <button className="secondaryButton" type="button" onClick={closeEditor}>Cancel</button>
             <button className="primaryButton" disabled={busy} type="submit">{busy ? "Saving…" : "Save task"}</button>
           </div>
         </form>

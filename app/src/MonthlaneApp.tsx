@@ -670,14 +670,14 @@ export function MonthlaneApp() {
         setEditingTask(task);
       }} />
       <QuickCapture open={captureOpen} defaults={captureDefaults} onClose={() => setCaptureOpen(false)} onCreate={createTask} onCreateReading={createReadingItem} />
-      <TaskEditorDrawer
-        open={Boolean(editingTask)}
+      {editingTask && <TaskEditorDrawer
+        key={editingTask.id}
         task={editingTask}
         categories={categories}
         onClose={() => setEditingTask(undefined)}
         onSave={saveTask}
         onDelete={async (id) => { await taskRepository.softDeleteTask(id); await refresh(); notify("Task deleted."); }}
-      />
+      />}
       <WrapUpDialog
         open={wrapUpOpen}
         date={todayKey}
