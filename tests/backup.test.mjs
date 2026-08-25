@@ -181,14 +181,14 @@ test("task merge keeps additions, newest updates, and deletion markers", () => {
   assert.ok(merged.tasks.find(({ id }) => id === "deleted")?.deletedAt);
 });
 
-test("near-simultaneous task edits create one stable conflict copy", () => {
+test("near-simultaneous task edits keep only the newest record", () => {
   const local = backupV2([flowTask("shared", "Local title", "2026-07-30T10:00:00.000Z")]);
   const remote = backupV2([flowTask("shared", "Remote title", "2026-07-30T10:00:01.000Z")]);
   const once = mergeBackups(local, remote);
-  const conflicts = once.tasks.filter(({ id }) => id.includes("-conflict-"));
-  assert.equal(conflicts.length, 1);
-  assert.match(conflicts[0].title, /Sync conflict/);
-  assert.equal(mergeBackups(once, remote).tasks.filter(({ id }) => id.includes("-conflict-")).length, 1);
+  assert.equal(once.tasks.filter(({ id }) => id.includes("-conflict-")).length, 0);
+  assert.equal(once.tasks.length, 1);
+  assert.equal(once.tasks[0].title, "Remote title");
+  assert.equal(mergeBackups(once, remote).tasks.length, 1);
 });
 
 test("timestamp-only task changes keep the newest record without a conflict", () => {
@@ -208,9 +208,8 @@ test("task sync summary reports task-level changes", () => {
     flowTask("updated", "New", "2026-07-30T10:00:00.000Z"),
     flowTask("deleted", "Delete me", "2026-07-30T10:00:00.000Z", { deletedAt: "2026-07-30T10:00:00.000Z" }),
     flowTask("added", "Added", "2026-07-30T10:00:00.000Z"),
-    flowTask("updated-conflict-x", "Old (Sync conflict)", "2026-07-30T09:00:00.000Z"),
   ]);
   const summary = summarizeTaskSync(local, merged);
-  assert.deepEqual(summary, { added: 1, updated: 1, deleted: 1, conflicts: 1 });
-  assert.equal(taskSyncSummaryText(summary), "1 task added · 1 task updated · 1 task deleted · 1 conflict created");
+  assert.deepEqual(summary, { added: 1, updated: 1, deleted: 1, conflicts: 0 });
+  assert.equal(taskSyncSummaryText(summary), "1 task added · 1 task updated · 1 task deleted");
 });

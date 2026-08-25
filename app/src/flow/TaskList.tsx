@@ -2,7 +2,8 @@
 
 import { Archive, CalendarIcon, MoreHorizontal, RotateCcw } from "../icons";
 import type { Category, FlowTask, TaskBucket } from "../types";
-import { isTodayCarryOver } from "./taskFilters";
+import { isTaskDoneOn, isTodayCarryOver } from "./taskFilters";
+import { recurrenceLabel } from "../recurrence";
 import { TaskCheckbox } from "./TaskCheckbox";
 
 type Props = {
@@ -50,9 +51,10 @@ export function TaskList({
     <div className="taskList">
       {tasks.map((task, index) => {
         const category = categoryById(task.categoryId);
+        const done = isTaskDoneOn(task, today);
         return (
           <article
-            className={`taskRow ${task.status === "completed" ? "completed" : ""} ${dropIndex === index ? "dropBefore" : ""}`}
+            className={`taskRow ${done ? "completed" : ""} ${dropIndex === index ? "dropBefore" : ""}`}
             key={task.id}
             draggable={reorderable}
             onDragStart={(event) => {
@@ -83,9 +85,9 @@ export function TaskList({
             }}
           >
             <TaskCheckbox
-              checked={task.status === "completed"}
+              checked={done}
               label={task.title}
-              onChange={() => task.status === "completed" ? onReopen(task) : onComplete(task)}
+              onChange={() => done ? onReopen(task) : onComplete(task)}
             />
             <button className="taskContent" type="button" onClick={() => onEdit(task)}>
               <span className="taskTitleLine">
@@ -94,8 +96,10 @@ export function TaskList({
               </span>
               <span className="taskMeta">
                 {isTodayCarryOver(task, today) && <span className="carryOverBadge">昨日遗留</span>}
+                {task.learningTrackTitle && <span className="taskSourceBadge">From {task.learningTrackTitle}</span>}
+                {task.recurrence && <span className="taskRepeatBadge">↻ {recurrenceLabel(task.recurrence)}</span>}
                 {task.scheduledTime && <span>{task.scheduledTime}</span>}
-                {task.scheduledDate && <span>{task.scheduledDate}</span>}
+                {!task.recurrence && task.scheduledDate && <span>{task.scheduledDate}</span>}
                 {task.dueDate && <span>Due {task.dueDate}</span>}
                 {task.estimatedMinutes && <span>{task.estimatedMinutes} min</span>}
               </span>

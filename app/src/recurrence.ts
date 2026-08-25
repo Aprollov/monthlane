@@ -1,5 +1,5 @@
 import { fromDateKey, toDateKey } from "./dates.ts";
-import type { CalendarEvent, RecurrenceException, RecurrenceRule } from "./types.ts";
+import type { CalendarEvent, FlowTask, RecurrenceException, RecurrenceRule } from "./types.ts";
 
 const DAY_MS = 86_400_000;
 
@@ -61,15 +61,26 @@ const occurrenceIndex = (start: Date, candidate: Date, rule: RecurrenceRule) => 
   return candidate.getDate() === expectedDay ? years / rule.interval + 1 : 0;
 };
 
+export const occursOnDate = (startDate: string, rule: RecurrenceRule, dateKey: string) => {
+  const candidate = fromDateKey(dateKey);
+  const start = fromDateKey(startDate);
+  const index = occurrenceIndex(start, candidate, rule);
+  if (!index) return false;
+  if (rule.endType === "date" && rule.endDate && dateKey > rule.endDate) return false;
+  if (rule.endType === "count" && index > (rule.count ?? 1)) return false;
+  return true;
+};
+
 export const occursOn = (event: CalendarEvent, dateKey: string) => {
   if (!event.recurrence) return event.startDate === dateKey;
-  const candidate = fromDateKey(dateKey);
-  const start = fromDateKey(event.startDate);
-  const index = occurrenceIndex(start, candidate, event.recurrence);
-  if (!index) return false;
-  if (event.recurrence.endType === "date" && event.recurrence.endDate && dateKey > event.recurrence.endDate) return false;
-  if (event.recurrence.endType === "count" && index > (event.recurrence.count ?? 1)) return false;
-  return true;
+  return occursOnDate(event.startDate, event.recurrence, dateKey);
+};
+
+/** Whether a task series (or one-off scheduled task) lands on the given date. */
+export const taskOccursOn = (task: FlowTask, dateKey: string) => {
+  if (!task.scheduledDate) return false;
+  if (!task.recurrence) return task.scheduledDate === dateKey;
+  return occursOnDate(task.scheduledDate, task.recurrence, dateKey);
 };
 
 export const expandEvents = (

@@ -1,5 +1,6 @@
 import { openMonthlaneDb } from "../database.ts";
 import { getDeviceId } from "../device.ts";
+import { flowBucketForScheduledDate } from "./taskFilters.ts";
 import type {
   CreateTaskInput,
   FlowTask,
@@ -130,6 +131,11 @@ export const createTaskRepository = ({
         pageTitle: input.pageTitle,
         thumbnailUrl: input.thumbnailUrl,
         linkedEventId: input.linkedEventId,
+        learningTrackId: input.learningTrackId,
+        learningTrackTitle: input.learningTrackTitle,
+        recurrence: input.recurrence,
+        completedDates: input.completedDates,
+        priority: input.priority ?? "medium",
         sortOrder: input.sortOrder ?? Date.parse(timestamp),
         completedAt: input.completedAt,
         archivedAt: input.archivedAt,
@@ -144,6 +150,11 @@ export const createTaskRepository = ({
       return task;
     },
     updateTask: (id: string, changes: UpdateTaskInput) => writeUpdate(id, changes),
+    /** Single entry point for rescheduling: updates the date and derives the flow bucket. */
+    moveTaskToDate: (id: string, scheduledDate: string, today: string) =>
+      writeUpdate(id, { scheduledDate, bucket: flowBucketForScheduledDate(scheduledDate, today) }),
+    /** Persists a fully formed task record, used by type conversion to keep the same id. */
+    putTask: (task: FlowTask) => persistence.put(task),
     getTaskById: (id: string) => persistence.get(id),
     async getAllTasks() {
       return (await persistence.getAll()).filter((task) => !task.deletedAt);
@@ -172,6 +183,9 @@ export const createTaskRepository = ({
         archivedAt: undefined,
       }, timestamp);
     },
+    /** Explicit one-way transitions, for callers that hold a stale task snapshot. */
+    setDone: (id: string) => writeUpdate(id, { status: "completed", completedAt: now(), archivedAt: undefined }),
+    setOpen: (id: string) => writeUpdate(id, { status: "open", completedAt: undefined, archivedAt: undefined }),
     archiveTask: (id: string) => {
       const timestamp = now();
       return writeUpdate(id, { status: "archived", archivedAt: timestamp }, timestamp);

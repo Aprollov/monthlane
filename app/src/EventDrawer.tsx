@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { X } from "./icons";
+import { MoreHorizontal, X } from "./icons";
 import { recurrenceLabel } from "./recurrence";
 import type { CalendarEvent, Category, EventDraft, RecurrenceFrequency, RecurrenceRule } from "./types";
 
@@ -13,9 +13,11 @@ type Props = {
   onClose: () => void;
   onSave: (draft: EventDraft) => Promise<void>;
   onDelete?: () => Promise<void>;
+  onConvert?: () => void;
 };
 
-export function EventDrawer({ open, date, event, categories, onClose, onSave, onDelete }: Props) {
+export function EventDrawer({ open, date, event, categories, onClose, onSave, onDelete, onConvert }: Props) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const titleId = useId();
   const titleInput = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<EventDraft>({
@@ -94,9 +96,23 @@ export function EventDrawer({ open, date, event, categories, onClose, onSave, on
             <p className="eyebrow">{event ? "Event details" : "A new moment"}</p>
             <h2 id={titleId}>{event ? "Edit event" : "Create event"}</h2>
           </div>
-          <button className="iconButton" type="button" onClick={onClose} aria-label="Close editor" title="Close">
-            <X />
-          </button>
+          <div className="drawerHeaderActions">
+            {event && onConvert && (
+              <div className="detailMenu">
+                <button className="iconButton" type="button" aria-label="More options" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}>
+                  <MoreHorizontal />
+                </button>
+                {menuOpen && (
+                  <div className="detailMenuPanel">
+                    <button type="button" onClick={() => { setMenuOpen(false); onConvert(); }}>Convert to Task</button>
+                  </div>
+                )}
+              </div>
+            )}
+            <button className="iconButton" type="button" onClick={onClose} aria-label="Close editor" title="Close">
+              <X />
+            </button>
+          </div>
         </header>
         <form className="eventForm" onSubmit={submit}>
           <label>

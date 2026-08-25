@@ -1,27 +1,37 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CalendarsDialog } from "./CalendarsDialog";
+import { ReadLaterCapture } from "./ReadLaterCapture";
+import { analyzeClipboard, type ClipboardLink } from "./flow/urlDetection";
+import { categoryItemCount, singleVisibleCategoryId } from "./categoryStats";
 import { EventDrawer } from "./EventDrawer";
+import { canConvertEvent, eventToTask, taskToEvent } from "./convertEntry";
 import { SearchDrawer } from "./SearchDrawer";
 import { ScopeDialog, type RecurrenceScope } from "./ScopeDialog";
 import { SettingsDrawer } from "./SettingsDrawer";
 import { calendarDragItem, formatMovedDate, rescheduledEvent, type CalendarDragItem } from "./calendarReschedule";
-import { syncConnectedCloud } from "./cloudAutoSync";
+import { runStartupSync, syncConnectedCloud } from "./cloudAutoSync";
 import { addMonths, buildMonthGrid, longDateLabel, monthLabel, toDateKey } from "./dates";
-import { ensureCategories, listCategories, listEvents, listExceptions, saveEvent, saveException, softDeleteEvent } from "./database";
+import { cleanupSyncConflictTasks, ensureCategories, listCategories, listEvents, listExceptions, migrateLegacyCategories, saveEvent, saveException, softDeleteEvent } from "./database";
+import { FALLBACK_CATEGORY_ID } from "./types";
 import { getDeviceId } from "./device";
 import { FlowNavigation } from "./flow/FlowNavigation";
 import { FlowWorkspace, type FlowView } from "./flow/FlowWorkspace";
 import { DayPanel } from "./flow/DayPanel";
+import { TaskCheckbox } from "./flow/TaskCheckbox";
 import { QuickCapture } from "./flow/QuickCapture";
 import { ReadingWorkspace } from "./flow/ReadingWorkspace";
 import { TaskEditorDrawer } from "./flow/TaskEditorDrawer";
-import { groupCalendarEntries } from "./flow/calendarEntries";
+import { activeGridEntries, groupCalendarEntries, priorityColor, priorityMark } from "./flow/calendarEntries";
+import { flowBucketForScheduledDate, isTaskDoneOn } from "./flow/taskFilters";
 import { taskRepository } from "./flow/taskRepository";
 import { readingRepository } from "./flow/readingRepository";
-import { BookOpen, CalendarIcon, ChevronLeft, ChevronRight, InboxIcon, Menu, Plus, Search, Settings, Sliders, Sun } from "./icons";
+import { learningRepository } from "./learning/learningRepository";
+import type { LearningWorkspaceProps } from "./learning/LearningWorkspace";
+import { BookOpen, CalendarIcon, ChevronLeft, ChevronRight, GraduationCap, InboxIcon, Menu, Plus, Search, Settings, Sliders, Sun } from "./icons";
 import { expandEvents, previousDateKey } from "./recurrence";
-import type { CalendarEvent, Category, CreateReadingItemInput, CreateTaskInput, EventDraft, FlowBucket, FlowTask, ReadingItem, RecurrenceException, TaskBucket, UpdateTaskInput } from "./types";
+import type { CalendarEvent, Category, CreateReadingItemInput, CreateTaskInput, EventDraft, FlowBucket, FlowTask, LearningProgressLog, LearningTrack, ReadingItem, RecurrenceException, TaskBucket, UpdateTaskInput } from "./types";
 import { openSmartLink } from "./flow/smartLinks";
 import { useCalendarDrag } from "./useCalendarDrag";
 
@@ -36,6 +46,8 @@ export function MonthlaneApp() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [tasks, setTasks] = useState<FlowTask[]>([]);
   const [readingItems, setReadingItems] = useState<ReadingItem[]>([]);
+  const [learningTracks, setLearningTracks] = useState<LearningTrack[]>([]);
+  const [learningLogs, setLearningLogs] = useState<LearningProgressLog[]>([]);
   const [activeView, setActiveView] = useState<FlowView>("month");
   const [mobileFlowBucket, setMobileFlowBucket] = useState<FlowBucket>("today");
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(() => {
@@ -49,6 +61,9 @@ export function MonthlaneApp() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
   const [dayPanelOpen, setDayPanelOpen] = useState(false);
+  const [calendarsOpen, setCalendarsOpen] = useState(false);
+  const [readLaterOpen, setReadLaterOpen] = useState(false);
+  const [clipboardLink, setClipboardLink] = useState<ClipboardLink>();
   const [captureDefaults, setCaptureDefaults] = useState<Omit<CreateTaskInput, "title">>({ bucket: "inbox" });
   const [editingTask, setEditingTask] = useState<FlowTask>();
   const [editingEvent, setEditingEvent] = useState<CalendarEvent>();
@@ -58,28 +73,46 @@ export function MonthlaneApp() {
 
   const refresh = useCallback(async () => {
     await ensureCategories();
+    await migrateLegacyCategories();
+    await cleanupSyncConflictTasks();
     await readingRepository.migrateLegacyTasks();
-    const [storedEvents, storedCategories, storedExceptions, storedTasks, storedReadingItems] = await Promise.all([
+    const [storedEvents, storedCategories, storedExceptions, storedTasks, storedReadingItems, storedTracks, storedLogs] = await Promise.all([
       listEvents(),
       listCategories(),
       listExceptions(),
       taskRepository.getAllTasks(),
       readingRepository.getAll(),
+      learningRepository.listTracks(),
+      learningRepository.listLogs(),
     ]);
     setEvents(storedEvents);
     setCategories(storedCategories);
     setExceptions(storedExceptions);
     setTasks(storedTasks);
     setReadingItems(storedReadingItems);
+    setLearningTracks(storedTracks);
+    setLearningLogs(storedLogs);
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void runStartupSync().then((synced) => {
+        if (synced) void refresh();
+      });
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
   useEffect(() => {
     localStorage.setItem("monthlane-hidden-calendars", JSON.stringify([...hiddenCategories]));
   }, [hiddenCategories]);
   useEffect(() => {
     localStorage.setItem("monthlane-last-month", toDateKey(visibleMonth));
   }, [visibleMonth]);
+  const focusCategoryId = useMemo(
+    () => singleVisibleCategoryId(categories, hiddenCategories, FALLBACK_CATEGORY_ID, events, tasks),
+    [categories, hiddenCategories, events, tasks],
+  );
 
   const notify = useCallback((message: string, action?: { label: string; run: () => void }) => {
     setToast({ message, actionLabel: action?.label, onAction: action?.run });
@@ -106,6 +139,17 @@ export function MonthlaneApp() {
     setCaptureOpen(true);
   }, []);
 
+  const openReadLaterCapture = useCallback(async () => {
+    let clipText = "";
+    try {
+      clipText = (await navigator.clipboard?.readText?.()) ?? "";
+    } catch {
+      clipText = "";
+    }
+    setClipboardLink(analyzeClipboard(clipText));
+    setReadLaterOpen(true);
+  }, []);
+
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
@@ -116,6 +160,8 @@ export function MonthlaneApp() {
         setCaptureOpen(false);
         setDayPanelOpen(false);
         setEditingTask(undefined);
+        setCalendarsOpen(false);
+        setReadLaterOpen(false);
         return;
       }
       if (
@@ -124,7 +170,7 @@ export function MonthlaneApp() {
         Boolean(target.closest("button, a, [role='button'], [role='dialog']"))
       ) return;
       if (event.key.toLowerCase() === "n") openCreate();
-      if (event.key.toLowerCase() === "q") openCapture({ bucket: "inbox" });
+      if (event.key.toLowerCase() === "q") openCapture({ bucket: "inbox", categoryId: focusCategoryId });
       if (event.key === "/") {
         event.preventDefault();
         setSearchOpen(true);
@@ -135,7 +181,7 @@ export function MonthlaneApp() {
     };
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, [goToToday, openCapture, openCreate]);
+  }, [goToToday, openCapture, openCreate, focusCategoryId]);
 
   const days = useMemo(() => buildMonthGrid(visibleMonth), [visibleMonth]);
   const expandedEvents = useMemo(
@@ -151,14 +197,16 @@ export function MonthlaneApp() {
       task.scheduledDate &&
       task.status !== "archived" &&
       !task.deletedAt &&
+      (!task.recurrence || task.status === "open") &&
       (!task.categoryId || !hiddenCategories.has(task.categoryId)),
     ),
     [hiddenCategories, tasks],
   );
   const entriesByDate = useMemo(
-    () => groupCalendarEntries(visibleEvents, visibleScheduledTasks),
-    [visibleEvents, visibleScheduledTasks],
+    () => groupCalendarEntries(visibleEvents, visibleScheduledTasks, toDateKey(days[0]), toDateKey(days[days.length - 1])),
+    [days, visibleEvents, visibleScheduledTasks],
   );
+  const gridEntriesByDate = useMemo(() => activeGridEntries(entriesByDate), [entriesByDate]);
   const searchableEvents = useMemo(
     () => [
       ...events,
@@ -322,16 +370,13 @@ export function MonthlaneApp() {
     setSidebarOpen(false);
   };
 
-  const selectFlowBucket = (bucket: FlowBucket) => {
-    setMobileFlowBucket(bucket);
-    selectView("flow");
-  };
-
   const captureDefaultsForView = (view: FlowView): Omit<CreateTaskInput, "title"> =>
     view === "flow" ? { bucket: mobileFlowBucket } : { bucket: "inbox" };
 
   const createTask = async (input: CreateTaskInput) => {
-    await taskRepository.createTask(input);
+    const bucket = input.bucket
+      ?? (input.scheduledDate ? flowBucketForScheduledDate(input.scheduledDate, todayKey) : undefined);
+    await taskRepository.createTask({ ...input, bucket });
     await refresh();
     notify("Task captured.");
   };
@@ -340,6 +385,44 @@ export function MonthlaneApp() {
     await readingRepository.create(input);
     await refresh();
     notify("Saved to Later Reading.");
+  };
+
+  const saveLearningTrack = async (track: LearningTrack) => {
+    await learningRepository.saveTrack(track);
+    await refresh();
+    void syncConnectedCloud().then((synced) => { if (synced) void refresh(); }).catch(() => {});
+    notify("Growth item saved.");
+  };
+
+  const checkInGrowth = async (track: LearningTrack) => {
+    const existing = learningLogs.some((log) =>
+      log.learningTrackId === track.id && log.date === todayKey && !log.deletedAt,
+    );
+    if (existing) {
+      notify("Already checked in today.");
+      return;
+    }
+    const timestamp = new Date().toISOString();
+    await learningRepository.saveLog({
+      id: crypto.randomUUID(),
+      learningTrackId: track.id,
+      date: todayKey,
+      title: "Check-in",
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      deviceId: getDeviceId(),
+    });
+    await refresh();
+    void syncConnectedCloud().then((synced) => { if (synced) void refresh(); }).catch(() => {});
+    notify("Checked in.");
+  };
+
+  const learningWorkspaceProps: LearningWorkspaceProps = {
+    tracks: learningTracks,
+    logs: learningLogs,
+    today: todayKey,
+    onSaveTrack: saveLearningTrack,
+    onCheckIn: checkInGrowth,
   };
 
   const openReadingItem = async (item: ReadingItem) => {
@@ -370,8 +453,11 @@ export function MonthlaneApp() {
 
   const saveTask = async (id: string, changes: UpdateTaskInput) => {
     const current = tasks.find((task) => task.id === id);
-    const { status, ...fields } = changes;
-    await taskRepository.updateTask(id, fields);
+    const { status, scheduledDate, ...fields } = changes;
+    if (scheduledDate !== undefined && scheduledDate !== current?.scheduledDate) {
+      await taskRepository.moveTaskToDate(id, scheduledDate, todayKey);
+    }
+    if (Object.keys(fields).length > 0) await taskRepository.updateTask(id, fields);
     if (status && status !== current?.status) {
       if (status === "completed") await taskRepository.completeTask(id);
       if (status === "open") await taskRepository.reopenTask(id);
@@ -380,6 +466,28 @@ export function MonthlaneApp() {
     await refresh();
     notify("Task updated.");
   };
+
+  const toggleTaskDone = useCallback(async (task: FlowTask, date: string) => {
+    if (task.recurrence) {
+      const done = (task.completedDates ?? []).includes(date);
+      const completedDates = done
+        ? (task.completedDates ?? []).filter((day) => day !== date)
+        : [...(task.completedDates ?? []), date].sort();
+      await taskRepository.updateTask(task.id, { completedDates });
+      await refresh();
+      notify(done ? "Marked as not done." : "Marked done for this day.");
+      return;
+    }
+    if (task.status === "completed") {
+      await taskRepository.reopenTask(task.id);
+      await refresh();
+      notify("Task reopened.");
+    } else {
+      await taskRepository.completeTask(task.id);
+      await refresh();
+      notify("Task completed.");
+    }
+  }, [notify, refresh]);
 
   const moveTask = async (task: FlowTask, bucket: TaskBucket) => {
     await taskRepository.updateTask(task.id, {
@@ -401,9 +509,30 @@ export function MonthlaneApp() {
   };
 
   const scheduleTask = async (task: FlowTask, scheduledDate: string) => {
-    await taskRepository.updateTask(task.id, { scheduledDate });
+    await taskRepository.moveTaskToDate(task.id, scheduledDate, todayKey);
     await refresh();
     notify(`Scheduled for ${scheduledDate}.`);
+  };
+
+  const convertTaskToEvent = async (task: FlowTask) => {
+    const nextEvent = taskToEvent(task, todayKey);
+    await taskRepository.softDeleteTask(task.id);
+    await saveEvent(nextEvent);
+    setSelectedDate(nextEvent.startDate);
+    await refresh();
+    notify("Converted to event.");
+  };
+
+  const convertEventToTask = async (event: CalendarEvent) => {
+    if (!canConvertEvent(event)) {
+      notify("Recurring events can’t be converted.");
+      return;
+    }
+    const nextTask = eventToTask(event, todayKey);
+    await softDeleteEvent(event);
+    await taskRepository.putTask(nextTask);
+    await refresh();
+    notify("Converted to task.");
   };
 
   const deleteTask = async (task: FlowTask) => {
@@ -414,7 +543,7 @@ export function MonthlaneApp() {
 
   const persistCalendarDate = useCallback(async (item: CalendarDragItem, date: string) => {
     if (item.type === "task") {
-      await taskRepository.updateTask(item.id, { scheduledDate: date });
+      await taskRepository.moveTaskToDate(item.id, date, todayKey);
     } else {
       const current = events.find((event) => event.id === item.id);
       if (!current || current.recurrence) throw new Error("This event cannot be moved from the calendar.");
@@ -424,7 +553,7 @@ export function MonthlaneApp() {
     void syncConnectedCloud()
       .then((synced) => { if (synced) void refresh(); })
       .catch(() => { /* The local move remains safely saved while offline. */ });
-  }, [events, refresh]);
+  }, [events, refresh, todayKey]);
 
   const moveCalendarEntry = useCallback(async (item: CalendarDragItem, targetDate: string) => {
     if (targetDate === item.sourceDate) return;
@@ -466,15 +595,13 @@ export function MonthlaneApp() {
           <h1>{monthLabel(visibleMonth)}</h1>
           <button className="iconButton" onClick={() => setVisibleMonth((month) => addMonths(month, 1))} aria-label="Next month" title="Next month"><ChevronRight /></button>
           <button className="secondaryButton todayButton" onClick={goToToday}>Today</button>
-        </div> : <div className="flowTopTitle">{activeView === "reading" ? "Read Later" : activeView === "completed" ? "Completed" : "Calendar + Flow"}</div>}
+        </div> : <div className="flowTopTitle">{activeView === "reading" ? "Read Later" : activeView === "completed" ? "Completed" : activeView === "learning" ? "Growth" : "Calendar + Flow"}</div>}
         <div className="topActions">
           <button className="iconButton" onClick={() => setSearchOpen(true)} aria-label="Search events and tasks" title="Search"><Search /></button>
-          <button className="primaryButton newEventButton" onClick={() => activeView === "month"
-            ? openCreate()
-            : activeView === "reading"
-              ? document.getElementById("reading-capture")?.focus()
-              : openCapture(captureDefaultsForView(activeView))}>
-            <Plus /><span>{activeView === "month" ? "New event" : activeView === "reading" ? "Add link" : "Add task"}</span>
+          <button className="primaryButton newEventButton readLaterEntry" onClick={() => activeView === "learning"
+            ? document.getElementById("growth-add")?.click()
+            : void openReadLaterCapture()} aria-label={activeView === "learning" ? "Add Growth item" : "Save to Read Later"} title={activeView === "learning" ? "Add Growth item" : "Save to Read Later"}>
+            <Plus />
           </button>
           <button className="iconButton" onClick={() => setSettingsOpen(true)} aria-label="Open settings" title="Settings"><Settings /></button>
         </div>
@@ -502,11 +629,13 @@ export function MonthlaneApp() {
             <div className="sectionTitle"><span>Calendar</span></div>
             <button className={`sidebarNavButton ${activeView === "month" ? "active" : ""}`} onClick={() => selectView("month")}><CalendarIcon /><span>Month</span></button>
           </section>
-          <FlowNavigation activeView={activeView} activeBucket={mobileFlowBucket} onSelect={selectView} onSelectBucket={selectFlowBucket} />
+          <FlowNavigation activeView={activeView} onSelect={selectView} />
           <section className="sidebarSection">
             <div className="sectionTitle"><span>Calendars</span><Sliders /></div>
             <div className="categoryList">
-              {categories.map((category) => {
+              {categories
+                .filter((category) => category.id !== FALLBACK_CATEGORY_ID && categoryItemCount(category.id, events, tasks) > 0)
+                .map((category) => {
                 const visible = !hiddenCategories.has(category.id);
                 return (
                   <label className="categoryRow" key={category.id}>
@@ -519,11 +648,12 @@ export function MonthlaneApp() {
                     }} />
                     <span className="categoryDot" style={{ background: category.color }} />
                     <span>{category.name}</span>
-                    <small>{events.filter((event) => event.categoryId === category.id).length + tasks.filter((task) => task.categoryId === category.id && !task.deletedAt && task.status !== "archived").length}</small>
+                    <small>{categoryItemCount(category.id, events, tasks)}</small>
                   </label>
                 );
               })}
             </div>
+            <button className="manageCalendarsButton" onClick={() => setCalendarsOpen(true)}>Manage calendars</button>
           </section>
           <div className="sidebarUtilities">
             <button onClick={() => { setSearchOpen(true); setSidebarOpen(false); }}><Search /><span>Search</span></button>
@@ -539,7 +669,7 @@ export function MonthlaneApp() {
           <div className="calendarGrid">
             {days.map((date) => {
               const key = toDateKey(date);
-              const dayEntries = entriesByDate.get(key) ?? [];
+              const dayEntries = gridEntriesByDate.get(key) ?? [];
               const isToday = key === toDateKey(today);
               const selected = key === selectedDate;
               const outside = date.getMonth() !== visibleMonth.getMonth();
@@ -581,7 +711,7 @@ export function MonthlaneApp() {
                     {dayEntries.length > 0 && <span className="mobileEventCount">{dayEntries.length}</span>}
                   </div>
                   <div className="dayEvents">
-                    {dayEntries.slice(0, 3).map((entry) => {
+                    {dayEntries.slice(0, 2).map((entry) => {
                       if (entry.type === "event") {
                         const category = categoryById(entry.event.categoryId);
                         const dragItem = calendarDragItem(entry);
@@ -603,14 +733,14 @@ export function MonthlaneApp() {
                             <span className="eventAccent" style={{ background: category?.color }} />
                             {!entry.event.allDay && <time>{entry.event.startTime}</time>}
                             <span className="eventTitle">{entry.event.title}</span>
-                            {entry.event.recurrenceParentId && <span className="repeatMark" title="Repeating event">↻</span>}
+                            {(entry.event.recurrence || entry.event.recurrenceParentId) && <span className="repeatMark" aria-label="Recurring event">↻</span>}
                           </button>
                         );
                       }
                       const dragItem = calendarDragItem(entry);
                       return (
                         <button
-                          className={`calendarTaskItem ${entry.task.status === "completed" ? "completed" : ""} ${calendarDrag.isSource(dragItem) ? "calendarDragSource" : ""}`}
+                          className={`calendarTaskItem ${calendarDrag.isSource(dragItem) ? "calendarDragSource" : ""}`}
                           key={entry.id}
                           title={entry.task.title}
                           onPointerDown={(event) => calendarDrag.onPointerDown(event, dragItem)}
@@ -623,13 +753,25 @@ export function MonthlaneApp() {
                           clickEvent.stopPropagation();
                           setEditingTask(entry.task);
                         }}>
-                          <span className="calendarTaskCheck">{entry.task.status === "completed" ? "✓" : ""}</span>
+                          <span className="priorityBar" style={{ background: priorityColor(entry.task.priority) }} />
                           {entry.task.scheduledTime && <time>{entry.task.scheduledTime}</time>}
                           <span>{entry.task.title}</span>
+                          {entry.task.recurrence && <span className="repeatMark" aria-label="Recurring task">↻</span>}
                         </button>
                       );
                     })}
-                    {dayEntries.length > 3 && <button className="moreEvents" onClick={() => { setSelectedDate(key); setDayPanelOpen(true); }}>+{dayEntries.length - 3} more</button>}
+                    {dayEntries.length > 2 && (
+                      <button
+                        className="moreEvents"
+                        onClick={(clickEvent) => {
+                          clickEvent.stopPropagation();
+                          setSelectedDate(key);
+                          setDayPanelOpen(true);
+                        }}
+                      >
+                        +{dayEntries.length - 2} more
+                      </button>
+                    )}
                   </div>
                   <div className="mobileDots" aria-hidden="true">
                     {dayEntries.slice(0, 3).map((entry) => <span key={entry.id} style={{ background: categoryById(entry.type === "event" ? entry.event.categoryId : entry.task.categoryId ?? "")?.color ?? "var(--accent)" }} />)}
@@ -662,7 +804,7 @@ export function MonthlaneApp() {
               </button>
             ) : (
               <button
-                className={`mobileEventRow ${entry.task.status === "completed" ? "completed" : ""} ${calendarDrag.isSource(calendarDragItem(entry)) ? "calendarDragSource" : ""}`}
+                className={`mobileEventRow ${isTaskDoneOn(entry.task, entry.date) ? "completed" : ""} ${calendarDrag.isSource(calendarDragItem(entry)) ? "calendarDragSource" : ""}`}
                 key={entry.id}
                 onPointerDown={(event) => calendarDrag.onPointerDown(event, calendarDragItem(entry))}
                 onClick={(event) => {
@@ -672,8 +814,12 @@ export function MonthlaneApp() {
                   }
                   setEditingTask(entry.task);
                 }}>
-                <span className="mobileTaskCheck">{entry.task.status === "completed" ? "✓" : ""}</span>
-                <span><strong>{entry.task.title}</strong><small>{entry.task.scheduledTime ? `Task · ${entry.task.scheduledTime}` : "Task · No time"}</small></span>
+                <TaskCheckbox
+                  checked={isTaskDoneOn(entry.task, entry.date ?? entry.task.scheduledDate ?? todayKey)}
+                  label={entry.task.title}
+                  onChange={() => void toggleTaskDone(entry.task, entry.date ?? entry.task.scheduledDate ?? todayKey)}
+                />
+                <span><strong><span className="priorityMark" aria-hidden="true">{priorityMark(entry.task.priority)}</span> {entry.task.title}</strong><small>{entry.task.scheduledTime ? `Task · ${entry.task.scheduledTime}` : "Task · No time"}{entry.task.categoryId && categoryById(entry.task.categoryId) ? ` · ${categoryById(entry.task.categoryId)!.name}` : ""}</small></span>
                 <ChevronRight />
               </button>
             )) : <p className="clearDay">Nothing planned. Leave it open, or add a moment.</p>}
@@ -686,12 +832,14 @@ export function MonthlaneApp() {
             categories={categories}
             onClose={() => setDayPanelOpen(false)}
             onAddEvent={() => openCreate(selectedDate)}
-            onAddTask={() => openCapture({ bucket: "thisWeek", scheduledDate: selectedDate })}
+            onAddTask={() => openCapture({ bucket: flowBucketForScheduledDate(selectedDate, todayKey), scheduledDate: selectedDate, categoryId: focusCategoryId })}
             onOpenEvent={selectEvent}
             onOpenTask={setEditingTask}
-            onCompleteTask={async (task) => { await taskRepository.completeTask(task.id); await refresh(); notify("Task completed."); }}
-            onReopenTask={async (task) => { await taskRepository.reopenTask(task.id); await refresh(); notify("Task reopened."); }}
+            onCompleteTask={(task) => void toggleTaskDone(task, selectedDate)}
+            onReopenTask={(task) => void toggleTaskDone(task, selectedDate)}
             onReturnToInbox={(task) => void moveTask(task, "inbox")}
+            onDragStart={(event, item) => calendarDrag.onPointerDown(event, item)}
+            isDragSource={calendarDrag.isSource}
           />
         </section> : activeView === "reading" ? <ReadingWorkspace
           items={readingItems}
@@ -708,16 +856,17 @@ export function MonthlaneApp() {
           today={todayKey}
           mobileBucket={mobileFlowBucket}
           onMobileBucketChange={setMobileFlowBucket}
-          onCreate={createTask}
+          onCreate={(input) => createTask(input.categoryId ? input : { ...input, categoryId: focusCategoryId })}
           onEdit={setEditingTask}
-          onComplete={async (task) => { await taskRepository.completeTask(task.id); await refresh(); notify("Task completed."); }}
-          onReopen={async (task) => { await taskRepository.reopenTask(task.id); await refresh(); notify("Task reopened."); }}
+          onComplete={(task) => void toggleTaskDone(task, todayKey)}
+          onReopen={(task) => void toggleTaskDone(task, todayKey)}
           onArchive={async (task) => { await taskRepository.archiveTask(task.id); await refresh(); notify("Task archived."); }}
           onMove={(task, bucket) => void moveTask(task, bucket)}
           onPlace={(taskId, bucket, previousOrder, nextOrder) => void placeTask(taskId, bucket, previousOrder, nextOrder)}
           onSchedule={(task, date) => void scheduleTask(task, date)}
           onDelete={(task) => void deleteTask(task)}
           onReorder={async (ids) => { await taskRepository.reorderTasks(ids); await refresh(); }}
+          learning={learningWorkspaceProps}
         />}
       </div>
 
@@ -726,15 +875,22 @@ export function MonthlaneApp() {
         <button className={activeView === "flow" && mobileFlowBucket === "today" ? "active" : ""} aria-current={activeView === "flow" && mobileFlowBucket === "today" ? "page" : undefined} onClick={() => { setMobileFlowBucket("today"); selectView("flow"); }}><Sun /><span>Today</span></button>
         <button className={activeView === "flow" && mobileFlowBucket === "inbox" ? "active" : ""} aria-current={activeView === "flow" && mobileFlowBucket === "inbox" ? "page" : undefined} onClick={() => { setMobileFlowBucket("inbox"); selectView("flow"); }}><InboxIcon /><span>Inbox</span></button>
         <button className={activeView === "reading" ? "active" : ""} aria-current={activeView === "reading" ? "page" : undefined} onClick={() => selectView("reading")}><BookOpen /><span>Reading</span></button>
-        <button className="mobileAdd" onClick={() => activeView === "month"
-          ? openCreate()
-          : activeView === "reading"
-            ? document.getElementById("reading-capture")?.focus()
-            : openCapture(captureDefaultsForView(activeView))}><Plus /><span>Add</span></button>
+        <button className={activeView === "learning" ? "active" : ""} aria-current={activeView === "learning" ? "page" : undefined} onClick={() => selectView("learning")}><GraduationCap /><span>Growth</span></button>
+        <button className="mobileAdd" onClick={() => activeView === "learning"
+          ? document.getElementById("growth-add")?.click()
+          : void openReadLaterCapture()} aria-label={activeView === "learning" ? "Add Growth item" : "Save to Read Later"} title={activeView === "learning" ? "Add Growth item" : "Save to Read Later"}><Plus /></button>
         <button onClick={() => setSidebarOpen(true)}><Menu /><span>More</span></button>
       </nav>
 
-      <EventDrawer open={drawerOpen} date={selectedDate} event={editingEvent} categories={categories} onClose={() => setDrawerOpen(false)} onSave={saveDraft} onDelete={editingEvent ? removeEvent : undefined} />
+      <CalendarsDialog
+        open={calendarsOpen}
+        categories={categories}
+        events={events}
+        tasks={tasks}
+        onClose={() => setCalendarsOpen(false)}
+        onChanged={refresh}
+      />
+      <EventDrawer open={drawerOpen} date={selectedDate} event={editingEvent} categories={categories} onClose={() => setDrawerOpen(false)} onSave={saveDraft} onDelete={editingEvent ? removeEvent : undefined} onConvert={editingEvent ? () => { const target = editingEvent; setDrawerOpen(false); setEditingEvent(undefined); void convertEventToTask(target); } : undefined} />
       <SearchDrawer open={searchOpen} events={searchableEvents} tasks={tasks} categories={categories} onClose={() => setSearchOpen(false)} onSelect={(event) => {
         setSelectedDate(event.startDate);
         setVisibleMonth(new Date(Number(event.startDate.slice(0, 4)), Number(event.startDate.slice(5, 7)) - 1, 1));
@@ -753,13 +909,31 @@ export function MonthlaneApp() {
         setSearchOpen(false);
         setEditingTask(task);
       }} />
-      <QuickCapture open={captureOpen} defaults={captureDefaults} onClose={() => setCaptureOpen(false)} onCreate={createTask} onCreateReading={createReadingItem} />
+      <QuickCapture open={captureOpen} defaults={captureDefaults} categories={categories} onClose={() => setCaptureOpen(false)} onCreate={createTask} onCreateReading={createReadingItem} />
+      <ReadLaterCapture open={readLaterOpen} link={clipboardLink} onClose={() => setReadLaterOpen(false)} onSave={createReadingItem} />
       {editingTask && <TaskEditorDrawer
         key={editingTask.id}
         task={editingTask}
         categories={categories}
+        today={todayKey}
         onClose={() => setEditingTask(undefined)}
         onSave={saveTask}
+        onConvert={editingTask && editingTask.kind !== "readLater" ? () => { const target = editingTask; setEditingTask(undefined); void convertTaskToEvent(target); } : undefined}
+        onToggleDone={async (target, nextDone) => {
+          if (target.recurrence) {
+            const date = target.scheduledDate ?? todayKey;
+            const completedDates = nextDone
+              ? [...new Set([...(target.completedDates ?? []), date])].sort()
+              : (target.completedDates ?? []).filter((day) => day !== date);
+            await taskRepository.updateTask(target.id, { completedDates });
+          } else if (nextDone) {
+            await taskRepository.setDone(target.id);
+          } else {
+            await taskRepository.setOpen(target.id);
+          }
+          await refresh();
+          notify(nextDone ? "Task completed." : "Task reopened.");
+        }}
         onDelete={async (id) => { await taskRepository.softDeleteTask(id); await refresh(); notify("Task deleted."); }}
       />}
       <ScopeDialog open={Boolean(scopeRequest)} action={scopeRequest?.action ?? "edit"} onChoose={(scope) => void chooseScope(scope)} onClose={() => setScopeRequest(undefined)} />

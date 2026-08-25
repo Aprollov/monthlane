@@ -1,3 +1,4 @@
+import { taskOccursOn } from "../recurrence.ts";
 import type { FlowBucket, FlowTask } from "../types.ts";
 import { toDateKey } from "../dates.ts";
 
@@ -8,20 +9,36 @@ export const flowBucket = (task: FlowTask): FlowBucket => {
   return "inbox";
 };
 
+/**
+ * Derives the Flow stage from a calendar scheduling date.
+ * Today maps to the "today" bucket; any other date maps to "thisWeek"
+ * (the planned stage); no date leaves the task in its current stage.
+ */
+export const flowBucketForScheduledDate = (scheduledDate: string, today: string): FlowBucket =>
+  scheduledDate === today ? "today" : "thisWeek";
+
 export const inboxTasks = (tasks: FlowTask[]) =>
   tasks.filter((task) => active(task) && task.status === "open" && flowBucket(task) === "inbox");
 
 export const inboxActionTasks = (tasks: FlowTask[]) =>
   inboxTasks(tasks).filter((task) => task.kind !== "readLater");
 
-export const thisWeekTasks = (tasks: FlowTask[]) =>
-  tasks.filter((task) => active(task) && task.status === "open" && flowBucket(task) === "thisWeek");
+/** Repeating tasks are done per occurrence date; one-off tasks use their status. */
+export const isTaskDoneOn = (task: FlowTask, date: string) =>
+  task.recurrence ? (task.completedDates ?? []).includes(date) : task.status === "completed";
 
-export const todayTasks = (tasks: FlowTask[], _today?: string) =>
-  tasks.filter((task) => active(task) && task.status === "open" && flowBucket(task) === "today");
+export const thisWeekTasks = (tasks: FlowTask[]) =>
+  tasks.filter((task) => active(task) && task.status === "open" && !task.recurrence && flowBucket(task) === "thisWeek");
+
+export const todayTasks = (tasks: FlowTask[], today?: string) =>
+  tasks.filter((task) => active(task) && task.status === "open" && (
+    task.recurrence
+      ? Boolean(today && taskOccursOn(task, today) && !(task.completedDates ?? []).includes(today))
+      : flowBucket(task) === "today"
+  ));
 
 export const unfinishedTasks = (tasks: FlowTask[], today: string) =>
-  tasks.filter((task) => active(task) && task.status === "open" && Boolean(task.scheduledDate) && task.scheduledDate! < today);
+  tasks.filter((task) => active(task) && task.status === "open" && !task.recurrence && Boolean(task.scheduledDate) && task.scheduledDate! < today);
 
 export const completedTasks = (tasks: FlowTask[]) =>
   tasks.filter((task) => !task.deletedAt && task.status === "completed");
@@ -30,6 +47,7 @@ export const completedTasksForBucket = (tasks: FlowTask[], bucket: FlowBucket) =
   completedTasks(tasks).filter((task) => flowBucket(task) === bucket);
 
 export const isTodayCarryOver = (task: FlowTask, today: string) =>
+  !task.recurrence &&
   flowBucket(task) === "today" &&
   task.status === "open" &&
   Boolean(task.focusedAt && toDateKey(new Date(task.focusedAt)) < today);

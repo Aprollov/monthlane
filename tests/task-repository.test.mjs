@@ -27,6 +27,20 @@ const createHarness = () => {
   return { records, persistence, repository };
 };
 
+test("moveTaskToDate updates the date and derives the flow bucket", async () => {
+  const { records, repository } = createHarness();
+  const task = await repository.createTask({ title: "Reschedule me" });
+  const today = "2026-07-29";
+  await repository.moveTaskToDate(task.id, today, today);
+  assert.equal(records.get(task.id).scheduledDate, today);
+  assert.equal(records.get(task.id).bucket, "today");
+  await repository.moveTaskToDate(task.id, "2026-08-04", today);
+  assert.equal(records.get(task.id).scheduledDate, "2026-08-04");
+  assert.equal(records.get(task.id).bucket, "thisWeek");
+  assert.equal(records.get(task.id).title, "Reschedule me");
+  assert.equal(records.get(task.id).status, "open");
+});
+
 test("creates an inbox task with stable identity metadata", async () => {
   const { repository } = createHarness();
   const task = await repository.createTask({ title: "  Write weekly report  " });

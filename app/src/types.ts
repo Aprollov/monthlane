@@ -30,6 +30,8 @@ export type CalendarEvent = {
   deviceId: string;
 };
 
+export type TaskPriority = "high" | "medium" | "low";
+
 export type RecurrenceException = {
   id: string;
   seriesId: string;
@@ -76,6 +78,8 @@ export type MonthlaneBackupV2 = {
   categories: Category[];
   exceptions: RecurrenceException[];
   settings?: Array<{ id: string; [key: string]: unknown }>;
+  learningTracks?: LearningTrack[];
+  learningProgressLogs?: LearningProgressLog[];
   syncMetadata?: {
     lastUpdatedByDeviceId: string;
     revision: number;
@@ -110,6 +114,11 @@ export type FlowTask = {
   pageTitle?: string;
   thumbnailUrl?: string;
   linkedEventId?: string;
+  learningTrackId?: string;
+  learningTrackTitle?: string;
+  recurrence?: RecurrenceRule;
+  completedDates?: string[];
+  priority?: TaskPriority;
   sortOrder: number;
   completedAt?: string;
   archivedAt?: string;
@@ -137,6 +146,46 @@ export type ReadingItem = {
 export type CreateReadingItemInput = Pick<ReadingItem, "url" | "title" | "platform" | "platformIcon"> &
   Partial<Pick<ReadingItem, "deepLink" | "readStatus" | "createdAt">>;
 
+export type ProgressMetric = "sessions" | "duration" | "units" | "milestones" | "manual";
+
+export type LearningMilestone = {
+  id: string;
+  title: string;
+  completed: boolean;
+  completedAt?: string;
+};
+
+export type LearningTrack = {
+  id: string;
+  title: string;
+  icon: string;
+  currentStage: string;
+  goal: string;
+  nextStep: string;
+  weeklyTarget: number;
+  progressMetric: ProgressMetric;
+  milestones: LearningMilestone[];
+  archived: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+  deviceId: string;
+};
+
+export type LearningProgressLog = {
+  id: string;
+  learningTrackId: string;
+  date: string;
+  title: string;
+  duration?: number;
+  stage?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+  deviceId: string;
+};
+
 export type CreateTaskInput = Pick<FlowTask, "title"> & Partial<Omit<
   FlowTask,
   "id" | "title" | "status" | "sortOrder" | "createdAt" | "updatedAt" | "deviceId"
@@ -150,12 +199,15 @@ export type UpdateTaskInput = Partial<Omit<
   "id" | "createdAt" | "updatedAt" | "deviceId"
 >>;
 
+/** Long-term life areas. "other" stays as a hidden fallback and never appears in navigation. */
+export const FALLBACK_CATEGORY_ID = "other";
+
 export const defaultCategories: Category[] = [
   ["work", "Work", "#6F8191"],
-  ["personal", "Personal", "#8A7894"],
   ["life", "Life", "#758B75"],
-  ["renewals", "Renewals", "#A4835F"],
-  ["anniversaries", "Anniversaries", "#A16F72"],
+  ["personal", "Personal", "#8A7894"],
+  ["relationships", "Relationships", "#A16F72"],
+  ["finance", "Finance", "#A4835F"],
   ["other", "Other", "#858585"],
 ].map(([id, name, color]) => ({
   id,

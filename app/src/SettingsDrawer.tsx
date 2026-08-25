@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { signIn, signUp, synchronize, taskSyncSummaryText, type CloudConfig, type CloudSession } from "./cloud";
-import { CLOUD_CONFIG_KEY, CLOUD_LAST_SYNC_KEY, CLOUD_SESSION_KEY } from "./cloudAutoSync";
+import { CLOUD_CONFIG_KEY, CLOUD_SESSION_KEY, getSyncStatus, recordSyncStatus, restoreConnectedCloud, uploadConnectedCloud, type SyncStatus } from "./cloudAutoSync";
 import { exportBackup, importBackup } from "./database";
 import { X } from "./icons";
 import type { MonthlaneBackup } from "./types";
@@ -26,7 +26,7 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [lastSync, setLastSync] = useState(() => localStorage.getItem(CLOUD_LAST_SYNC_KEY) ?? "");
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | undefined>(() => getSyncStatus());
   const fileInput = useRef<HTMLInputElement>(null);
   const replaceFileInput = useRef<HTMLInputElement>(null);
   const dialogRef = useDialogFocus<HTMLElement>(open, onClose);
@@ -107,12 +107,49 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
       await onChanged();
       setSession(result.session);
       localStorage.setItem(CLOUD_SESSION_KEY, JSON.stringify(result.session));
-      const syncedAt = new Date().toISOString();
-      setLastSync(syncedAt);
-      localStorage.setItem(CLOUD_LAST_SYNC_KEY, syncedAt);
+      recordSyncStatus("success");
+      setSyncStatus(getSyncStatus());
       notify(taskSyncSummaryText(result.summary));
     } catch (syncError) {
-      setError(syncError instanceof Error ? syncError.message : "Sync failed.");
+      const message = syncError instanceof Error ? syncError.message : "Sync failed.";
+      recordSyncStatus("failed", message);
+      setSyncStatus(getSyncStatus());
+      setError(message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const uploadNow = async () => {
+    if (!session) return;
+    if (!window.confirm("Upload this device’s data to the cloud? The cloud copy will be replaced.")) return;
+    setBusy(true);
+    setError("");
+    try {
+      await uploadConnectedCloud();
+      setSyncStatus(getSyncStatus());
+      notify("Local data uploaded to the cloud.");
+    } catch (uploadError) {
+      setSyncStatus(getSyncStatus());
+      setError(uploadError instanceof Error ? uploadError.message : "Upload failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const restoreNow = async () => {
+    if (!session) return;
+    if (!window.confirm("Restore from cloud? Local events and tasks on this device will be replaced by the cloud copy.")) return;
+    setBusy(true);
+    setError("");
+    try {
+      const restored = await restoreConnectedCloud();
+      await onChanged();
+      setSyncStatus(getSyncStatus());
+      notify(restored ? "Cloud data restored on this device." : "No cloud backup found for this account.");
+    } catch (restoreError) {
+      setSyncStatus(getSyncStatus());
+      setError(restoreError instanceof Error ? restoreError.message : "Restore failed.");
     } finally {
       setBusy(false);
     }
@@ -161,10 +198,20 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
             </div>
           ) : (
             <div className="accountCard">
-              <div><strong>{session.user.email}</strong><span>{lastSync ? `Last synced ${new Date(lastSync).toLocaleString()}` : "Not synced yet"}</span></div>
+              <div>
+                <strong>{session.user.email}</strong>
+                <span>{syncStatus ? `Last synced ${new Date(syncStatus.at).toLocaleString()}` : "Not synced yet"}</span>
+                {syncStatus && (
+                  <span className={`syncBadge ${syncStatus.status === "success" ? "connected" : ""}`}>
+                    {syncStatus.status === "success" ? "Sync succeeded" : "Sync failed"}
+                  </span>
+                )}
+              </div>
               {error && <p className="settingsError">{error}</p>}
               <div className="settingsActions">
                 <button className="primaryButton" disabled={busy} onClick={() => void syncNow()}>{busy ? "Syncing…" : "Sync now"}</button>
+                <button className="secondaryButton" disabled={busy} onClick={() => void uploadNow()}>Upload local changes</button>
+                <button className="secondaryButton" disabled={busy} onClick={() => void restoreNow()}>Restore from cloud</button>
                 <button className="secondaryButton" onClick={() => {
                   setSession(undefined);
                   localStorage.removeItem(CLOUD_SESSION_KEY);
@@ -173,7 +220,7 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
               </div>
             </div>
           )}
-          <p className="settingsHint">Your calendar remains available offline. Sync merges changes using each record’s latest edit time.</p>
+          <p className="settingsHint">Your calendar remains available offline. “Sync now” merges both directions using each record’s latest edit time. The app also syncs automatically when it opens.</p>
         </section>
       </aside>
     </>

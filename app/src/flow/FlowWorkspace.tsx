@@ -4,9 +4,10 @@ import { fromDateKey, toDateKey } from "../dates";
 import type { Category, CreateTaskInput, FlowBucket, FlowTask, TaskBucket } from "../types";
 import { completedTasks, sortCompleted } from "./taskFilters";
 import { FlowBoard } from "./FlowBoard";
+import { LearningWorkspace, type LearningWorkspaceProps } from "../learning/LearningWorkspace";
 import { TaskList } from "./TaskList";
 
-export type FlowView = "month" | "flow" | "reading" | "completed";
+export type FlowView = "month" | "flow" | "reading" | "completed" | "learning";
 
 type Props = {
   view: Exclude<FlowView, "month" | "reading">;
@@ -25,6 +26,7 @@ type Props = {
   onSchedule: (task: FlowTask, date: string) => void;
   onDelete: (task: FlowTask) => void;
   onReorder: (ids: string[]) => void;
+  learning?: LearningWorkspaceProps;
 };
 
 export function FlowWorkspace({
@@ -44,6 +46,7 @@ export function FlowWorkspace({
   onSchedule,
   onDelete,
   onReorder,
+  learning,
 }: Props) {
   if (view === "flow") return (
     <section className="flowWorkspace flowBoardWorkspace">
@@ -73,6 +76,8 @@ export function FlowWorkspace({
       />
     </section>
   );
+
+  if (view === "learning" && learning) return <LearningWorkspace {...learning} />;
 
   const visible = sortCompleted(completedTasks(tasks));
   const yesterdayDate = fromDateKey(today);

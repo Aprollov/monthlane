@@ -8,6 +8,12 @@ export const fromDateKey = (value: string) => {
   return new Date(year, month - 1, day);
 };
 
+export const nextDateKey = (value: string) => {
+  const date = fromDateKey(value);
+  date.setDate(date.getDate() + 1);
+  return toDateKey(date);
+};
+
 export const addMonths = (date: Date, amount: number) =>
   new Date(date.getFullYear(), date.getMonth() + amount, 1);
 

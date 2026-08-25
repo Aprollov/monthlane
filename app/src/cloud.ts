@@ -111,11 +111,7 @@ export const refreshSession = async (config: CloudConfig, session: CloudSession)
   return sessionFromResponse(result);
 };
 
-export const synchronize = async (
-  config: CloudConfig,
-  session: CloudSession,
-  local: MonthlaneBackup,
-) => {
+export const fetchRemoteBackup = async (config: CloudConfig, session: CloudSession) => {
   const activeSession = await refreshSession(config, session);
   const headers = { Authorization: `Bearer ${activeSession.accessToken}` };
   const rows = await request<Array<{ payload: MonthlaneBackup }>>(
@@ -123,20 +119,42 @@ export const synchronize = async (
     { method: "GET", headers },
     config.anonKey,
   );
-  const merged = rows[0]?.payload ? mergeBackups(local, rows[0].payload) : local;
-  const summary = summarizeTaskSync(local, merged);
+  return { backup: rows[0]?.payload as MonthlaneBackup | undefined, session: activeSession };
+};
+
+export const pushBackup = async (
+  config: CloudConfig,
+  session: CloudSession,
+  backup: MonthlaneBackup,
+) => {
+  const activeSession = await refreshSession(config, session);
   await request(
     `${normalizedUrl(config.url)}/rest/v1/monthlane_backups?on_conflict=user_id`,
     {
       method: "POST",
-      headers: { ...headers, Prefer: "resolution=merge-duplicates,return=minimal" },
+      headers: {
+        Authorization: `Bearer ${activeSession.accessToken}`,
+        Prefer: "resolution=merge-duplicates,return=minimal",
+      },
       body: JSON.stringify({
         user_id: activeSession.user.id,
-        payload: merged,
+        payload: backup,
         updated_at: new Date().toISOString(),
       }),
     },
     config.anonKey,
   );
+  return activeSession;
+};
+
+export const synchronize = async (
+  config: CloudConfig,
+  session: CloudSession,
+  local: MonthlaneBackup,
+) => {
+  const { backup: remote, session: activeSession } = await fetchRemoteBackup(config, session);
+  const merged = remote ? mergeBackups(local, remote) : normalizeBackup(local);
+  const summary = summarizeTaskSync(local, merged);
+  await pushBackup(config, activeSession, merged);
   return { backup: merged as MonthlaneBackupV2, session: activeSession, summary };
 };

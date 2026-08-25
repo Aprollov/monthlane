@@ -50,6 +50,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .dangerOutlineButton { min-height: 38px; border: 1px solid #d9bcbc; border-radius: 8px; background: transparent; color: var(--danger); padding: 0 13px; cursor: pointer; font-size: 12px; font-weight: 600; }
 .dangerOutlineButton:hover { background: var(--danger-soft); }
 .newEventButton { display: inline-flex; gap: 7px; align-items: center; }
+.readLaterUrl { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .todayButton { margin-left: 8px; }
 .workspace { height: calc(100dvh - 68px); display: grid; grid-template-columns: 238px minmax(0, 1fr); padding: 0 18px 18px; gap: 18px; overflow: hidden; }
 .sidebar { border-right: 1px solid var(--border); padding: 22px 18px 16px 2px; display: flex; flex-direction: column; min-height: 0; }
@@ -67,16 +68,23 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .categoryRow input { width: 14px; height: 14px; accent-color: var(--accent); margin: 0; }
 .categoryDot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
 .categoryRow small { color: var(--text-muted); }
+.manageCalendarsButton { margin-top: 8px; border: 0; background: transparent; color: var(--text-muted); font-size: 11px; padding: 4px 8px; text-align: left; cursor: pointer; }
+.manageCalendarsButton:hover { color: var(--text-primary); }
+.calendarsManageList { display: grid; gap: 2px; padding-top: 14px; max-height: 240px; overflow-y: auto; }
+.calendarsManageRow { display: grid; grid-template-columns: 8px 1fr auto; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 7px; font-size: 13px; color: var(--text-primary); }
+.calendarsManageRow small { color: var(--text-muted); }
+.calendarsAddForm { display: grid; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.calendarsAddForm label { display: grid; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+.calendarsAddForm input { border: 1px solid var(--border); border-radius: 7px; background: var(--surface); padding: 8px 10px; font-size: 13px; color: var(--text-primary); }
+.calendarsColorRow { display: flex; gap: 8px; }
+.calendarsSwatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+.calendarsSwatch.selected { border-color: var(--text-primary); }
 .sidebarFooter { margin-top: auto; color: var(--text-muted); font-size: 11px; display: flex; align-items: center; gap: 8px; padding: 12px 8px; }
 .calendarNavigation { padding-bottom: 12px; }
-.sidebarNavButton, .flowNavList button, .sidebarUtilities button { width: 100%; min-height: 34px; border: 0; border-radius: 7px; background: transparent; display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 9px; padding: 0 8px; color: var(--text-secondary); text-align: left; cursor: pointer; font-size: 12px; }
-.sidebarNavButton:hover, .flowNavList button:hover, .sidebarUtilities button:hover, .sidebarNavButton.active, .flowNavList button.active { background: var(--surface-hover); color: var(--text-primary); }
-.sidebarNavButton svg, .flowNavList svg, .sidebarUtilities svg { width: 16px; height: 16px; }
-.flowNavigation { padding-bottom: 18px; }
-.flowNavList { display: grid; gap: 2px; }
-.flowSubnav { margin-left: 8px; padding-left: 7px; border-left: 1px solid var(--border); }
-.moduleNavigation { display: grid; gap: 3px; padding-top: 1px; border-top: 1px solid var(--border); }
-.flowNavList small { color: var(--text-muted); font-size: 10px; }
+.sidebarNavButton, .sidebarUtilities button { width: 100%; min-height: 34px; border: 0; border-radius: 7px; background: transparent; display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 9px; padding: 0 8px; color: var(--text-secondary); text-align: left; cursor: pointer; font-size: 12px; }
+.sidebarNavButton:hover, .sidebarUtilities button:hover, .sidebarNavButton.active { background: var(--surface-hover); color: var(--text-primary); }
+.sidebarNavButton svg, .sidebarUtilities svg { width: 16px; height: 16px; }
+.moduleNavigation { display: grid; gap: 3px; padding-bottom: 18px; }
 .sidebarUtilities { display: grid; gap: 2px; padding: 12px 6px 0; border-top: 1px solid var(--border); }
 .statusDot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .calendarArea { min-width: 0; padding-top: 18px; display: flex; flex-direction: column; }
@@ -100,10 +108,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .eventItem time { color: var(--text-muted); font-size: 9px; }
 .eventAccent { align-self: stretch; width: 3px; border-radius: 4px 0 0 4px; flex: 0 0 auto; }
 .calendarTaskItem { height: 23px; width: 100%; border: 1px solid transparent; border-radius: 5px; background: transparent; display: flex; align-items: center; gap: 6px; padding: 0 6px; cursor: pointer; min-width: 0; text-align: left; color: var(--text-secondary); font-size: 11px; }
+.calendarTaskItem .repeatMark { margin-left: auto; color: var(--text-muted); flex: 0 0 auto; font-size: 10px; opacity: .75; }
 .calendarTaskItem:hover { border-color: var(--border); background: var(--surface-secondary); }
 .calendarTaskItem.completed { opacity: .55; }
 .calendarTaskItem.completed .eventTitle { text-decoration: line-through; }
-.calendarTaskCheck { width: 11px; height: 11px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: 3px; color: white; background: var(--surface); font-size: 8px; line-height: 1; }
+.calendarTaskCheck { width: 11px; height: 11px; flex: 0 0 auto; display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: 3px; color: white; background: var(--surface); font-size: 8px; line-height: 1; cursor: pointer; }
+.calendarTaskCheck:hover { border-color: var(--accent); }
 .calendarTaskItem.completed .calendarTaskCheck { border-color: var(--accent); background: var(--accent); }
 .calendarTaskItem .eventTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .calendarTaskItem time { margin-left: auto; color: var(--text-muted); font-size: 9px; }
@@ -112,7 +122,29 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .calendarDragging { user-select: none; cursor: grabbing; }
 .calendarDragging .eventItem, .calendarDragging .calendarTaskItem, .calendarDragging .mobileEventRow { cursor: grabbing; }
 .calendarDragPreview { position: fixed; top: 0; left: 0; z-index: 120; max-width: min(260px, calc(100vw - 30px)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; border: 1px solid #b8c8ba; border-radius: 7px; background: rgb(253 253 251 / 94%); color: var(--text-primary); padding: 8px 11px; font-size: 11px; box-shadow: 0 8px 22px rgb(45 55 46 / 15%); animation: toastIn 120ms ease-out; }
+.priorityBar { align-self: stretch; width: 3px; border-radius: 4px 0 0 4px; flex: 0 0 auto; }
+.priorityMark { flex: 0 0 auto; font-size: 8px; line-height: 1; }
+strong > .priorityMark { font-size: 9px; }
 .moreEvents { border: 0; background: transparent; color: var(--text-secondary); font-size: 10px; padding: 2px 4px; text-align: left; cursor: pointer; }
+.dayOverflowPopover { position: fixed; z-index: 70; width: 250px; max-height: 330px; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-panel); padding: 8px; }
+.dayOverflowHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 4px 8px; border-bottom: 1px solid var(--border); color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+.dayOverflowList { display: grid; gap: 2px; overflow-y: auto; padding-top: 6px; }
+.overflowItem { width: 100%; border: 0; border-radius: 7px; background: transparent; display: grid; grid-template-columns: 10px auto 1fr; align-items: center; gap: 7px; padding: 5px 6px; color: var(--text-primary); text-align: left; cursor: pointer; font-size: 12px; touch-action: none; }
+.overflowItem:hover { background: var(--surface-hover); }
+.overflowItem time { color: var(--text-muted); font-size: 10px; white-space: nowrap; }
+.overflowItem .calendarTaskCheck { font-size: 10px; color: var(--text-muted); }
+.overflowItem.completed .overflowTitle { text-decoration: line-through; color: var(--text-muted); }
+.overflowTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mobileChevron { display: none; }
+.taskCompleteToggle { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-secondary); border-radius: 999px; padding: 4px 11px; font-size: 11px; white-space: nowrap; cursor: pointer; }
+.taskCompleteToggle:hover { border-color: var(--accent); color: var(--accent); }
+.taskCompleteToggle.done { background: var(--accent); border-color: var(--accent); color: #fff; }
+.taskCompleteToggle.done:hover { opacity: .85; color: #fff; }
+.drawerHeaderActions { display: flex; align-items: center; gap: 4px; }
+.detailMenu { position: relative; }
+.detailMenuPanel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; display: grid; min-width: 168px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-panel); padding: 4px; }
+.detailMenuPanel button { border: 0; border-radius: 6px; background: transparent; padding: 8px 10px; color: var(--text-secondary); text-align: left; font-size: 12px; cursor: pointer; }
+.detailMenuPanel button:hover { background: var(--surface-hover); color: var(--text-primary); }
 .mobileDots, .mobileEventCount, .mobileOnly, .mobileBottomNav, .mobileDayList { display: none; }
 .dayPanel { position: fixed; inset: 68px 0 0 auto; z-index: 30; width: min(350px, calc(100vw - 260px)); overflow: auto; border-left: 1px solid var(--border); background: var(--surface); box-shadow: -12px 0 36px rgb(45 46 42 / 8%); padding: 25px 22px; animation: drawerIn 160ms ease-out; }
 .dayPanelHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
@@ -130,10 +162,15 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .dayPanelEvent small, .dayPanelTask small { color: var(--text-muted); font-size: 9px; }
 .dayPanelEvent svg { width: 14px; color: var(--text-muted); }
 .dayPanelTask { min-height: 54px; display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 9px; border-top: 1px solid var(--border); padding: 6px 3px; }
+.dayPanelTask:not(.completed) { grid-template-columns: 20px minmax(0, 1fr) auto auto; }
 .dayPanelTask > button:nth-child(2) { min-width: 0; display: grid; gap: 3px; border: 0; background: transparent; padding: 5px 0; text-align: left; cursor: pointer; }
 .dayPanelTask.completed > button:nth-child(2) strong { color: var(--text-muted); text-decoration: line-through; }
 .returnInboxButton { border: 0; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 9px; }
 .returnInboxButton:hover { color: var(--accent); }
+.dragHandle { width: 18px; height: 28px; display: grid; place-items: center; color: var(--text-muted); cursor: grab; opacity: 0; touch-action: none; }
+.dayPanelTask:hover .dragHandle { opacity: 1; }
+.dragHandle svg { width: 12px; }
+.calendarDragging .dayCell { background: #f4f8f4; box-shadow: inset 0 0 0 1px #dce8de; }
 .dayPanelEmpty { margin: 0; padding: 18px 2px; border-top: 1px solid var(--border); color: var(--text-muted); font-family: Georgia, "Times New Roman", serif; font-size: 13px; }
 .dayPanelActions { display: flex; gap: 8px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); }
 .dayPanelActions button { display: inline-flex; align-items: center; gap: 6px; }
@@ -305,6 +342,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .captureInput label { color: var(--text-muted); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
 .captureInput input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--text-primary); font-size: 17px; }
 .captureInput small { color: var(--accent); font-size: 9px; }
+.captureHints { display: flex; align-items: center; gap: 10px; }
+.captureCategoryHint { display: inline-flex; align-items: center; gap: 5px; color: var(--text-muted); }
+.captureCategoryHint .categoryDot { width: 7px; height: 7px; }
 .taskEditor { width: min(470px, 100%); }
 .linkSourceHint { margin: -11px 0 0; color: var(--text-muted); font-size: 9px; line-height: 1.4; }
 .laterReadSection { margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--border); }
@@ -449,17 +489,28 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .mobileDayList { display: block; padding: 22px 4px 8px; }
   .mobileDayHeader { justify-content: space-between; margin-bottom: 10px; }
   .mobileDayHeader h2 { font-size: 20px; }
-  .mobileEventRow { width: 100%; min-height: 54px; border: 0; border-top: 1px solid var(--border); background: transparent; display: grid; grid-template-columns: 9px 1fr 18px; align-items: center; gap: 11px; text-align: left; padding: 8px 4px; }
-  .mobileEventRow > span:nth-child(2) { display: grid; gap: 3px; }
-  .mobileEventRow strong { font-size: 13px; font-weight: 600; }
-  .mobileEventRow small { font-size: 11px; color: var(--text-muted); }
+  .mobileEventRow { width: 100%; min-height: 54px; border: 0; border-top: 1px solid var(--border); background: transparent; display: grid; grid-template-columns: auto minmax(0, 1fr) 18px; align-items: center; gap: 11px; text-align: left; padding: 8px 4px; }
+  .mobileEventRow > span:nth-child(2) { display: grid; gap: 3px; min-width: 0; }
+  .mobileEventRow strong { font-size: 13px; font-weight: 600; white-space: normal; word-break: break-word; }
+  .mobileEventRow small { font-size: 11px; color: var(--text-muted); white-space: normal; word-break: break-word; }
   .mobileEventRow svg { color: var(--text-muted); }
+  .mobileEventRow .priorityMark { margin-right: 2px; }
+  /* Day Panel task rows become two-line cards inside the bottom sheet. */
+  .dayPanelTask, .dayPanelTask:not(.completed) { position: relative; display: block; min-height: 0; padding: 8px 22px 8px 30px; }
+  .dayPanelTask .taskCheckbox { position: absolute; left: 2px; top: 11px; }
+  .dayPanelTask > button:nth-child(2) { display: block; width: 100%; min-width: 0; }
+  .dayPanelTask strong { white-space: normal; word-break: break-word; overflow: visible; text-overflow: clip; font-size: 13px; }
+  .dayPanelTask small { white-space: normal; word-break: break-word; font-size: 11px; }
+  .dayPanelTask .returnInboxButton, .dayPanelTask .dragHandle { display: none; }
+  .dayPanelTask .mobileChevron { display: block; position: absolute; right: 2px; top: 12px; width: 16px; height: 16px; color: var(--text-muted); pointer-events: none; }
+  .dayPanelEvent { white-space: normal; }
+  .dayPanelEvent span { white-space: normal; word-break: break-word; }
   .mobileEventRow.completed strong { color: var(--text-muted); text-decoration: line-through; }
   .mobileTaskCheck { width: 13px; height: 13px; display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: 4px; color: white; font-size: 9px; }
   .mobileEventRow.completed .mobileTaskCheck { border-color: var(--accent); background: var(--accent); }
   .dayPanel { display: block; inset: auto 0 0; z-index: 45; width: 100%; max-height: min(78dvh, 660px); border-left: 0; border-top: 1px solid var(--border-strong); border-radius: 15px 15px 0 0; padding: 22px 18px calc(82px + env(safe-area-inset-bottom)); box-shadow: 0 -16px 48px rgb(45 46 42 / 14%); }
   .clearDay { color: var(--text-muted); font-family: Georgia, "Times New Roman", serif; font-size: 14px; padding: 15px 0; margin: 0; border-top: 1px solid var(--border); }
-  .mobileBottomNav { position: fixed; z-index: 30; inset: auto 0 0; height: calc(68px + env(safe-area-inset-bottom)); padding: 6px 4px env(safe-area-inset-bottom); display: grid; grid-template-columns: repeat(6, 1fr); background: rgb(253 253 251 / 96%); border-top: 1px solid var(--border); }
+  .mobileBottomNav { position: fixed; z-index: 30; inset: auto 0 0; height: calc(68px + env(safe-area-inset-bottom)); padding: 6px 4px env(safe-area-inset-bottom); display: grid; grid-template-columns: repeat(7, 1fr); background: rgb(253 253 251 / 96%); border-top: 1px solid var(--border); }
   .mobileBottomNav button { border: 0; background: transparent; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 9px; }
   .mobileBottomNav button.active { color: var(--accent); font-weight: 700; }
   .mobileBottomNav .mobileAdd { color: var(--accent); font-weight: 700; }
@@ -484,6 +535,155 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .wrapUpTask select { grid-column: 2; width: 100%; }
   .wrapUpActions { align-items: stretch; flex-direction: column; }
   .wrapUpActions > div { display: grid; grid-template-columns: 1fr 1fr; }
+}
+
+
+/* Learning module */
+.learningWorkspace { max-width: 900px; margin: 0 auto; }
+.learningGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+.learningCard { display: flex; flex-direction: column; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.learningCardHead { display: flex; align-items: flex-start; gap: 10px; }
+.learningCardIcon { font-size: 20px; line-height: 1.2; }
+.learningCardTitle { display: flex; flex-direction: column; min-width: 0; }
+.learningCardTitle strong { font-size: 14px; }
+.learningCardTitle small { color: var(--text-secondary); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.learningProgressRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-secondary); }
+.learningStreak { color: var(--accent); font-weight: 700; white-space: nowrap; }
+.learningBar { height: 5px; border-radius: 99px; background: var(--surface-secondary); overflow: hidden; }
+.learningBar span { display: block; height: 100%; border-radius: 99px; background: var(--accent); transition: width .3s ease; }
+.learningNext { margin: 0; font-size: 12px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.learningOpenButton { margin-top: auto; }
+.learningSection { margin-top: 26px; }
+.learningArchivedTitle { margin: 0 0 12px; font-size: 13px; color: var(--text-secondary); font-weight: 700; }
+.learningArchivedGrid { opacity: .72; }
+.learningTrackForm { display: flex; flex-direction: column; gap: 12px; }
+.growthGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.growthCard { display: flex; flex-direction: column; gap: 16px; min-height: 190px; padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.growthCardHead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 11px; }
+.growthCardIcon { font-size: 24px; line-height: 1; }
+.growthCardHead > div { display: grid; gap: 4px; min-width: 0; }
+.growthCardHead strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
+.growthCardHead small { color: var(--text-muted); font-size: 10px; }
+.growthEditButton { border: 0; background: transparent; color: var(--text-muted); padding: 2px 0; font-size: 10px; cursor: pointer; }
+.growthEditButton:hover { color: var(--accent); }
+.growthCounts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.growthCounts > span { display: grid; gap: 3px; padding: 10px 12px; border-radius: 9px; background: var(--surface-secondary); }
+.growthCounts strong { font-size: 18px; font-weight: 650; }
+.growthCounts small { color: var(--text-muted); font-size: 9px; letter-spacing: .04em; text-transform: uppercase; }
+.growthCheckinButton { width: 100%; margin-top: auto; justify-content: center; }
+.growthCheckinButton.checked { color: var(--accent); border-color: #b8c8ba; background: var(--accent-soft); opacity: 1; }
+.taskSourceBadge { border-radius: 99px; background: var(--accent-soft); color: var(--accent); padding: 2px 6px; font-weight: 700; }
+
+/* Learning track detail */
+.learningDetail { max-width: 820px; display: flex; flex-direction: column; gap: 24px; }
+.learningHero { padding: 6px 0 26px; border-bottom: 1px solid var(--border); }
+.learningHeroTop { display: flex; align-items: flex-start; gap: 12px; }
+.learningBack { flex: none; margin-top: 2px; }
+.learningHeroBody { flex: 1; min-width: 0; }
+.learningHeroIcon { display: block; font-size: 34px; line-height: 1; margin-bottom: 12px; }
+.learningHeroBody h1 { margin: 0; font-size: 30px; font-weight: 750; letter-spacing: -.02em; line-height: 1.15; }
+.learningHeroSubtitle { margin: 8px 0 0; color: var(--text-secondary); font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 15px; line-height: 1.5; }
+.learningChips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.learningChip { display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 99px; background: var(--surface-secondary); color: var(--text-secondary); font-size: 12px; font-weight: 600; letter-spacing: .01em; }
+.learningChip.accent { background: var(--accent-soft); color: var(--accent); }
+.learningHeroBar { margin-top: 16px; max-width: 340px; }
+.learningHeroActions { display: flex; align-items: center; gap: 8px; flex: none; }
+.learningMoreMenu { position: relative; }
+.learningMoreButton { width: 38px; height: 38px; min-height: 0; display: grid; place-items: center; border: 0; border-radius: 9px; background: transparent; color: var(--text-secondary); cursor: pointer; }
+.learningMoreButton:hover { background: var(--surface-secondary); color: var(--text-primary); }
+.menuScrim { position: fixed; inset: 0; z-index: 39; background: transparent; }
+.learningMenuPanel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; min-width: 185px; display: flex; flex-direction: column; gap: 2px; padding: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-panel); }
+.learningMenuPanel button { display: flex; align-items: center; gap: 8px; border: 0; background: transparent; text-align: left; padding: 8px 10px; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text-primary); }
+.learningMenuPanel button:hover { background: var(--surface-secondary); }
+.learningMenuPanel svg { width: 15px; height: 15px; }
+.learningMenuDanger { color: var(--danger); }
+.learningMenuDanger:hover { background: var(--danger-soft); }
+
+.learningNextStep { display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--border); border-radius: 14px; padding: 24px 26px; background: linear-gradient(120deg, var(--accent-soft) 0%, var(--surface) 48%); }
+.learningNextStepLabel { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); }
+.learningNextStepAction { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: -.01em; line-height: 1.35; }
+.learningStepActions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+.ghostButton { min-height: 38px; border-radius: 8px; padding: 0 14px; border: 1px solid var(--border); background: transparent; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.ghostButton:hover { background: var(--surface-secondary); }
+
+.learningColumns { display: grid; grid-template-columns: minmax(0, 9fr) minmax(0, 11fr); gap: 18px; align-items: start; }
+.learningBlock { display: flex; flex-direction: column; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; }
+.learningBlockHeader { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.learningBlockHeader h2 { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--text-secondary); }
+.learningMilestoneCount { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
+.learningAboutRow { display: flex; flex-direction: column; gap: 4px; padding: 12px 0; border-top: 1px solid var(--border); }
+.learningBlock .learningAboutRow:first-of-type { border-top: 0; padding-top: 2px; }
+.learningAboutLabel { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
+.learningAboutValue { font-size: 14px; line-height: 1.5; }
+.learningAboutValue.unset { color: var(--text-muted); font-style: italic; }
+.learningField { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.learningField input, .learningField select, .learningField textarea { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 8px 10px; font-size: 13px; color: var(--text-primary); }
+.learningField input:focus, .learningField select:focus, .learningField textarea:focus { border-color: var(--accent); outline: none; }
+
+.learningStats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.learningStat { display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; background: var(--background); border-radius: 10px; }
+.learningStatLabel { font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); }
+.learningStatValue { font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
+.learningStatHint { font-size: 11px; color: var(--text-muted); }
+.learningLogActions { display: flex; gap: 8px; flex-wrap: wrap; }
+.learningLogEditingNote { margin: 0; font-size: 12px; font-weight: 700; color: var(--accent); }
+.learningLogForm { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--border); padding-top: 12px; }
+.learningLogForm label, .learningTrackForm label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.learningLogForm input, .learningLogForm textarea, .learningTrackForm input, .learningTrackForm select { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 8px 10px; font-size: 13px; color: var(--text-primary); }
+.learningFormRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.learningLogFormButtons { display: flex; gap: 8px; }
+.learningLogList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.learningLogRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 9px 0; border-top: 1px solid var(--border); }
+.learningLogRow:first-child { border-top: 0; }
+.learningLogMain { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.learningLogLine { font-size: 13px; line-height: 1.4; }
+.learningLogMeta { color: var(--text-muted); font-size: 12px; }
+.learningLogTitle { font-weight: 500; }
+.taskRepeatBadge { border-radius: 99px; background: var(--surface-secondary); color: var(--text-secondary); padding: 2px 6px; font-weight: 700; }
+.learningLogNotes { color: var(--text-muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.learningLogRowActions { display: flex; gap: 2px; opacity: 0; transition: opacity .15s ease; }
+.learningLogRow:hover .learningLogRowActions, .learningLogRow:focus-within .learningLogRowActions { opacity: 1; }
+.learningLogRowActions .iconButton { width: 24px; height: 24px; min-width: 24px; font-size: 12px; color: var(--text-muted); }
+.learningLogRowActions .iconButton:hover { color: var(--text-primary); }
+
+.learningMilestoneList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.learningMilestoneRow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
+.learningMilestoneRow:first-child { border-top: 0; }
+.milestoneToggle { width: 20px; height: 20px; flex: none; display: grid; place-items: center; border: 1.5px solid var(--border-strong); border-radius: 50%; background: transparent; color: white; font-size: 11px; cursor: pointer; padding: 0; transition: border-color .15s ease, background .15s ease; }
+.milestoneToggle:hover { border-color: var(--accent); }
+.learningMilestoneRow.completed .milestoneToggle { background: var(--accent); border-color: var(--accent); }
+.milestoneText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.milestoneTitle { font-size: 13.5px; cursor: text; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.learningMilestoneRow.completed .milestoneTitle { color: var(--text-muted); }
+.milestoneDate { font-size: 11px; color: var(--text-muted); }
+.milestoneEditInput { border: 1px solid var(--accent); border-radius: 6px; padding: 4px 8px; font-size: 13px; min-width: 0; }
+.milestoneControls { display: flex; gap: 2px; opacity: 0; transition: opacity .15s ease; }
+.learningMilestoneRow:hover .milestoneControls, .learningMilestoneRow:focus-within .milestoneControls { opacity: 1; }
+.milestoneControls .iconButton { width: 22px; height: 22px; min-width: 22px; color: var(--text-muted); }
+.milestoneControls .iconButton:hover:not(:disabled) { color: var(--text-primary); }
+.milestoneControls .iconButton:disabled { opacity: .3; cursor: default; }
+.learningAddMilestoneToggle { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 0; color: var(--accent); font-size: 12px; font-weight: 700; cursor: pointer; }
+.learningAddMilestoneToggle svg { width: 13px; height: 13px; }
+.learningAddMilestoneToggle:hover { color: var(--accent-hover); }
+.learningMilestoneAdd { display: flex; gap: 8px; }
+.learningMilestoneAdd input { flex: 1; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 8px 10px; font-size: 13px; color: var(--text-primary); }
+.learningEmpty { color: var(--text-muted); font-size: 12px; padding: 6px 0; font-style: italic; }
+
+@media (max-width: 720px) {
+  .growthGrid { grid-template-columns: 1fr; }
+  .growthCard { min-height: 0; }
+  .learningGrid, .learningArchivedGrid, .learningColumns { grid-template-columns: 1fr; }
+  .learningHeroBody h1 { font-size: 24px; }
+  .learningNextStep { padding: 20px; }
+  .learningStats { gap: 8px; }
+  .learningStat { padding: 10px 12px; }
+  .learningWorkspace { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  .mobileBottomNav button span { font-size: 8px; }
+}
+
+@media (max-width: 720px) and (pointer: coarse) {
+  .dragHandle { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

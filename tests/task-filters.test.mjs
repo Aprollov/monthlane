@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   completedTasksForBucket,
   completedTasks,
+  flowBucketForScheduledDate,
   inboxTasks,
   isTodayCarryOver,
   sortCompleted,
@@ -27,6 +28,12 @@ const task = (id, changes = {}) => ({
   updatedAt: "2026-07-29T10:00:00.000Z",
   deviceId: "test",
   ...changes,
+});
+
+test("Calendar dates map to Flow stages: today maps to today, other dates to planned", () => {
+  assert.equal(flowBucketForScheduledDate("2026-08-03", "2026-08-03"), "today");
+  assert.equal(flowBucketForScheduledDate("2026-08-10", "2026-08-03"), "thisWeek");
+  assert.equal(flowBucketForScheduledDate("2026-07-30", "2026-08-03"), "thisWeek");
 });
 
 test("Inbox is determined by bucket independently from scheduledDate", () => {

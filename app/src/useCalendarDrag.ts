@@ -116,13 +116,25 @@ export function useCalendarDrag({ onDrop, onRecurringBlocked }: Options) {
       updateActive(undefined);
     };
 
+    // Browsers may start a native HTML5 drag from the dragged row or its SVG
+    // icon; once that happens pointermove events stop firing and the pointer
+    // based drag never activates, so suppress native dragging on drag sources.
+    const onNativeDragStart = (event: DragEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest(".dragHandle, .calendarTaskItem, .eventItem, .mobileEventRow")) {
+        event.preventDefault();
+      }
+    };
+
     window.addEventListener("pointermove", onPointerMove, { passive: false });
     window.addEventListener("pointerup", finish, { passive: false });
     window.addEventListener("pointercancel", cancel);
+    window.addEventListener("dragstart", onNativeDragStart);
     return () => {
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", finish);
       window.removeEventListener("pointercancel", cancel);
+      window.removeEventListener("dragstart", onNativeDragStart);
       clearPending();
       document.body.classList.remove("calendarDragging");
     };

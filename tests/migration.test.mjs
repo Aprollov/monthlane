@@ -25,8 +25,8 @@ const createDatabaseMock = (initialStores = []) => {
   return { created, database, stores };
 };
 
-test("database version advances for separate reading items", () => {
-  assert.equal(DB_VERSION, 3);
+test("database version advances for learning tracks and logs", () => {
+  assert.equal(DB_VERSION, 4);
 });
 
 test("legacy migration adds task and reading stores while preserving existing stores", () => {
@@ -45,7 +45,7 @@ test("legacy migration adds task and reading stores while preserving existing st
 
   upgradeMonthlaneDb(mock.database);
 
-  assert.deepEqual(mock.created, ["tasks", "readingItems"]);
+  assert.deepEqual(mock.created, ["tasks", "readingItems", "learningTracks", "learningProgressLogs"]);
   assert.equal(mock.stores.get("events"), eventStore);
   assert.equal(mock.stores.get("categories"), categoryStore);
   assert.equal(mock.stores.get("settings"), settingsStore);
@@ -84,7 +84,16 @@ test("fresh database creates old stores and tasks without destructive operations
     "recurrenceExceptions",
     "tasks",
     "readingItems",
+    "learningTracks",
+    "learningProgressLogs",
     "settings",
     "syncMetadata",
   ]);
+});
+
+test("learning stores contain sync indexes", () => {
+  const mock = createDatabaseMock();
+  upgradeMonthlaneDb(mock.database);
+  assert.deepEqual(mock.stores.get("learningTracks").indexes.map(([name]) => name), ["updatedAt", "deletedAt"]);
+  assert.deepEqual(mock.stores.get("learningProgressLogs").indexes.map(([name]) => name), ["learningTrackId", "date", "updatedAt", "deletedAt"]);
 });
