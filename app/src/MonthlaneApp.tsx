@@ -29,7 +29,7 @@ import { taskRepository } from "./flow/taskRepository";
 import { readingRepository } from "./flow/readingRepository";
 import { learningRepository } from "./learning/learningRepository";
 import type { LearningWorkspaceProps } from "./learning/LearningWorkspace";
-import { BookOpen, CalendarIcon, ChevronLeft, ChevronRight, GraduationCap, InboxIcon, Menu, Plus, Search, Settings, Sliders, Sun } from "./icons";
+import { BookOpen, CalendarIcon, ChevronLeft, ChevronRight, InboxIcon, Menu, Plus, Search, Settings, Sliders, Sun } from "./icons";
 import { expandEvents, previousDateKey } from "./recurrence";
 import type { CalendarEvent, Category, CreateReadingItemInput, CreateTaskInput, EventDraft, FlowBucket, FlowTask, LearningProgressLog, LearningTrack, ReadingItem, RecurrenceException, TaskBucket, UpdateTaskInput } from "./types";
 import { openSmartLink } from "./flow/smartLinks";
@@ -875,7 +875,6 @@ export function MonthlaneApp() {
         <button className={activeView === "flow" && mobileFlowBucket === "today" ? "active" : ""} aria-current={activeView === "flow" && mobileFlowBucket === "today" ? "page" : undefined} onClick={() => { setMobileFlowBucket("today"); selectView("flow"); }}><Sun /><span>Today</span></button>
         <button className={activeView === "flow" && mobileFlowBucket === "inbox" ? "active" : ""} aria-current={activeView === "flow" && mobileFlowBucket === "inbox" ? "page" : undefined} onClick={() => { setMobileFlowBucket("inbox"); selectView("flow"); }}><InboxIcon /><span>Inbox</span></button>
         <button className={activeView === "reading" ? "active" : ""} aria-current={activeView === "reading" ? "page" : undefined} onClick={() => selectView("reading")}><BookOpen /><span>Reading</span></button>
-        <button className={activeView === "learning" ? "active" : ""} aria-current={activeView === "learning" ? "page" : undefined} onClick={() => selectView("learning")}><GraduationCap /><span>Growth</span></button>
         <button className="mobileAdd" onClick={() => activeView === "learning"
           ? document.getElementById("growth-add")?.click()
           : void openReadLaterCapture()} aria-label={activeView === "learning" ? "Add Growth item" : "Save to Read Later"} title={activeView === "learning" ? "Add Growth item" : "Save to Read Later"}><Plus /></button>

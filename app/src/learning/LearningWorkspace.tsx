@@ -37,7 +37,7 @@ export function LearningWorkspace({
       <header className="flowHeader">
         <div>
           <p className="eyebrow">Small steps, over time</p>
-          <h1>Growth</h1>
+          <h1>Growth <span className="growthTitleIcon" aria-hidden="true">🌱</span></h1>
           <p>A quiet place to notice the things you keep returning to.</p>
         </div>
         <button id="growth-add" className="primaryButton" onClick={() => { setEditingTrack(undefined); setFormOpen(true); }}>
@@ -46,8 +46,9 @@ export function LearningWorkspace({
       </header>
 
       {active.length ? (
-        <div className="growthGrid">
-          {active.map((track) => {
+        <section className="growthSection" aria-labelledby="growing-title">
+          <h2 id="growing-title">Growing</h2>
+          <div className="growthGrid">{active.map((track) => {
             const dates = growthCheckinDates(track, logs);
             const counts = growthCounts(dates, today);
             const checkedInToday = dates.includes(today);
@@ -62,8 +63,8 @@ export function LearningWorkspace({
                   <button className="growthEditButton" onClick={() => { setEditingTrack(track); setFormOpen(true); }}>Edit</button>
                 </div>
                 <div className="growthCounts" aria-label={`${counts.total} total check-ins, ${counts.month} this month`}>
-                  <span><strong>{counts.total}</strong><small>Total check-ins</small></span>
-                  <span><strong>{counts.month}</strong><small>This month</small></span>
+                  <span><strong>{counts.total}</strong><small>{counts.total === 1 ? "practice" : "practices"}</small></span>
+                  <span><strong>{counts.month}</strong><small>this month</small></span>
                 </div>
                 <button
                   className={checkedInToday ? "secondaryButton growthCheckinButton checked" : "primaryButton growthCheckinButton"}
@@ -77,8 +78,8 @@ export function LearningWorkspace({
                 </button>
               </article>
             );
-          })}
-        </div>
+          })}</div>
+        </section>
       ) : (
         <section className="learningSection">
           <p className="emptyTaskList">No Growth items yet. Add something you want to keep showing up for.</p>

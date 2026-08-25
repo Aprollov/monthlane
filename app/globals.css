@@ -510,7 +510,7 @@ strong > .priorityMark { font-size: 9px; }
   .mobileEventRow.completed .mobileTaskCheck { border-color: var(--accent); background: var(--accent); }
   .dayPanel { display: block; inset: auto 0 0; z-index: 45; width: 100%; max-height: min(78dvh, 660px); border-left: 0; border-top: 1px solid var(--border-strong); border-radius: 15px 15px 0 0; padding: 22px 18px calc(82px + env(safe-area-inset-bottom)); box-shadow: 0 -16px 48px rgb(45 46 42 / 14%); }
   .clearDay { color: var(--text-muted); font-family: Georgia, "Times New Roman", serif; font-size: 14px; padding: 15px 0; margin: 0; border-top: 1px solid var(--border); }
-  .mobileBottomNav { position: fixed; z-index: 30; inset: auto 0 0; height: calc(68px + env(safe-area-inset-bottom)); padding: 6px 4px env(safe-area-inset-bottom); display: grid; grid-template-columns: repeat(7, 1fr); background: rgb(253 253 251 / 96%); border-top: 1px solid var(--border); }
+  .mobileBottomNav { position: fixed; z-index: 30; inset: auto 0 0; height: calc(68px + env(safe-area-inset-bottom)); padding: 6px 4px env(safe-area-inset-bottom); display: grid; grid-template-columns: repeat(6, 1fr); background: rgb(253 253 251 / 96%); border-top: 1px solid var(--border); }
   .mobileBottomNav button { border: 0; background: transparent; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 9px; }
   .mobileBottomNav button.active { color: var(--accent); font-weight: 700; }
   .mobileBottomNav .mobileAdd { color: var(--accent); font-weight: 700; }
@@ -557,6 +557,9 @@ strong > .priorityMark { font-size: 9px; }
 .learningArchivedTitle { margin: 0 0 12px; font-size: 13px; color: var(--text-secondary); font-weight: 700; }
 .learningArchivedGrid { opacity: .72; }
 .learningTrackForm { display: flex; flex-direction: column; gap: 12px; }
+.growthTitleIcon { font-size: .72em; vertical-align: .08em; }
+.growthSection { display: grid; gap: 12px; }
+.growthSection > h2 { margin: 0; color: var(--text-secondary); font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
 .growthGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
 .growthCard { display: flex; flex-direction: column; gap: 16px; min-height: 190px; padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .growthCardHead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 11px; }
@@ -671,8 +674,26 @@ strong > .priorityMark { font-size: 9px; }
 .learningEmpty { color: var(--text-muted); font-size: 12px; padding: 6px 0; font-style: italic; }
 
 @media (max-width: 720px) {
-  .growthGrid { grid-template-columns: 1fr; }
-  .growthCard { min-height: 0; }
+  .learningWorkspace { width: 100%; padding-inline: 16px; }
+  .learningWorkspace .flowHeader { align-items: flex-start; margin-bottom: 24px; }
+  .learningWorkspace .flowHeader > div > p:last-child { max-width: 30ch; font-size: 12px; }
+  .learningWorkspace .flowHeader > .primaryButton { min-height: 44px; padding-inline: 13px; }
+  .growthSection { gap: 4px; }
+  .growthSection > h2 { padding: 0 2px 8px; }
+  .growthGrid { display: block; }
+  .growthCard { min-height: 0; gap: 12px; padding: 17px 2px 18px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; }
+  .growthCard:first-child { border-top: 1px solid var(--border); }
+  .growthCardHead { grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+  .growthCardIcon { font-size: 25px; text-align: center; }
+  .growthCardHead strong { font-size: 15px; }
+  .growthCardHead small { font-size: 10px; }
+  .growthEditButton { min-width: 44px; min-height: 44px; margin: -8px -4px -8px 0; border-radius: 8px; }
+  .growthCounts { display: flex; align-items: baseline; gap: 5px; padding-left: 44px; }
+  .growthCounts > span { display: inline-flex; align-items: baseline; gap: 3px; padding: 0; background: transparent; }
+  .growthCounts > span + span::before { content: "·"; margin-right: 2px; color: var(--text-muted); }
+  .growthCounts strong { font-size: 13px; font-weight: 650; }
+  .growthCounts small { font-size: 11px; letter-spacing: 0; text-transform: none; }
+  .growthCheckinButton { min-height: 48px; border-radius: 10px; font-size: 13px; }
   .learningGrid, .learningArchivedGrid, .learningColumns { grid-template-columns: 1fr; }
   .learningHeroBody h1 { font-size: 24px; }
   .learningNextStep { padding: 20px; }
