@@ -599,8 +599,14 @@ strong > .priorityMark { font-size: 9px; }
 .growthDateFields label small { color: var(--text-muted); font-weight: 400; }
 .growthDateFields input, .growthMomentForm input, .growthMomentForm select { min-height: 40px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-primary); padding: 0 10px; font-size: 13px; }
 .growthAddDatesButton { justify-content: center; min-height: 42px; }
-.growthDateHistory { max-height: 220px; overflow: auto; border-top: 1px solid var(--border); padding-top: 12px; }
-.growthDateHistory h3 { margin: 0 0 6px; font-size: 10px; color: var(--text-muted); letter-spacing: .08em; text-transform: uppercase; }
+.growthDisclosure, .growthHistoryToggle { width: 100%; min-height: 40px; border: 0; background: transparent; color: var(--text-secondary); padding: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; font: inherit; cursor: pointer; }
+.growthDisclosure { font-size: 12px; border-top: 1px solid var(--border); }
+.growthDisclosure span, .growthHistoryToggle span:last-child { color: var(--accent); }
+.growthStreakImport { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 10px; background: var(--surface-soft); }
+.growthStreakImport > button { align-self: flex-end; }
+.growthDateHistory { border-top: 1px solid var(--border); }
+.growthHistoryToggle { font-size: 11px; text-align: left; }
+.growthDateHistory ul { max-height: 220px; overflow: auto; border-top: 1px solid var(--border); }
 .growthDateHistory ul { list-style: none; margin: 0; padding: 0; }
 .growthDateHistory li { min-height: 38px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); font-size: 12px; }
 .growthDateHistory li:first-child { border-top: 0; }
@@ -728,6 +734,7 @@ strong > .priorityMark { font-size: 9px; }
   .growthPastButton { width: 44px; min-height: 44px; }
   .growthDateFields { grid-template-columns: 1fr; }
   .growthDatesDialog, .growthMomentForm { width: calc(100% - 24px); max-height: calc(100dvh - 24px); overflow: auto; }
+  .growthAddDatesButton, .growthDisclosure, .growthHistoryToggle, .growthStreakImport button, .growthDateHistory button { min-height: 44px; }
   .growthMomentFormActions > button { min-height: 44px; }
   .learningGrid, .learningArchivedGrid, .learningColumns { grid-template-columns: 1fr; }
   .learningHeroBody h1 { font-size: 24px; }

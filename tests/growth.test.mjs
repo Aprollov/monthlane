@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { dateRange, growthCheckinDates, growthCounts, momentDayCount } from "../app/src/learning/growthStats.ts";
+import { dateRange, growthCheckinDates, growthCounts, momentDayCount, trailingDateRange } from "../app/src/learning/growthStats.ts";
 
 const track = {
   id: "piano",
@@ -51,6 +51,12 @@ test("custom check-ins expand an inclusive local date range", () => {
   assert.deepEqual(dateRange("2026-08-23", "2026-08-25"), ["2026-08-23", "2026-08-24", "2026-08-25"]);
   assert.deepEqual(dateRange("2026-08-25"), ["2026-08-25"]);
   assert.deepEqual(dateRange("2026-08-25", "2026-08-23"), []);
+});
+
+test("existing streak import generates consecutive dates ending locally", () => {
+  assert.deepEqual(trailingDateRange(3, "2026-08-25"), ["2026-08-23", "2026-08-24", "2026-08-25"]);
+  assert.equal(trailingDateRange(86, "2026-08-25").length, 86);
+  assert.deepEqual(trailingDateRange(0, "2026-08-25"), []);
 });
 
 test("Moments count days since or until without UTC shifts", () => {

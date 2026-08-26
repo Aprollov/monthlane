@@ -26,6 +26,14 @@ export const dateRange = (start: string, end = start) => {
   return dates;
 };
 
+export const trailingDateRange = (days: number, endingDate: string) => {
+  if (!endingDate || !Number.isInteger(days) || days < 1) return [];
+  const end = fromDateKey(endingDate);
+  const start = new Date(end);
+  start.setDate(start.getDate() - days + 1);
+  return dateRange(toDateKey(start), endingDate);
+};
+
 export const momentDayCount = (date: string, today: string, type: "since" | "until") => {
   const milliseconds = fromDateKey(type === "since" ? today : date).getTime()
     - fromDateKey(type === "since" ? date : today).getTime();
