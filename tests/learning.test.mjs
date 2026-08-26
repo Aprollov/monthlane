@@ -141,11 +141,12 @@ test("learning tracks and logs merge with last-write-wins", () => {
     learningProgressLogs: [log("a", "2026-08-03")],
   });
   const incoming = backupShell({
-    learningTracks: [track({ updatedAt: "2026-08-05T08:00:00.000Z", currentStage: "Unit 6" })],
+    learningTracks: [track({ updatedAt: "2026-08-05T08:00:00.000Z", currentStage: "Unit 6", startedDate: "2025-12-01" })],
     learningProgressLogs: [log("b", "2026-08-04")],
   });
   const merged = mergeBackups(local, incoming);
   assert.equal(merged.learningTracks.length, 1);
   assert.equal(merged.learningTracks[0].currentStage, "Unit 6");
+  assert.equal(merged.learningTracks[0].startedDate, "2025-12-01");
   assert.equal(merged.learningProgressLogs.length, 2);
 });

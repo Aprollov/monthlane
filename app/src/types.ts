@@ -160,6 +160,7 @@ export type LearningTrack = {
   id: string;
   title: string;
   icon: string;
+  startedDate?: string;
   currentStage: string;
   goal: string;
   nextStep: string;

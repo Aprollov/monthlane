@@ -402,7 +402,12 @@ export function MonthlaneApp() {
       log.learningTrackId === track.id && log.date === todayKey && !log.deletedAt,
     );
     if (existing) {
-      notify("Already checked in today.");
+      const timestamp = new Date().toISOString();
+      const matches = learningLogs.filter((log) => log.learningTrackId === track.id && log.date === todayKey && !log.deletedAt);
+      for (const log of matches) await learningRepository.saveLog({ ...log, deletedAt: timestamp, updatedAt: timestamp });
+      await refresh();
+      void syncConnectedCloud().then((synced) => { if (synced) void refresh(); }).catch(() => {});
+      notify("Today's check-in removed.");
       return;
     }
     const timestamp = new Date().toISOString();

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getDeviceId } from "../device";
+import { toDateKey } from "../dates";
 import { X } from "../icons";
 import type { LearningTrack } from "../types";
 import { useDialogFocus } from "../useDialogFocus";
@@ -16,6 +17,7 @@ type Props = {
 export function GrowthItemFormDialog({ open, track, onClose, onSave }: Props) {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("🌱");
+  const [startedDate, setStartedDate] = useState(toDateKey(new Date()));
   const [busy, setBusy] = useState(false);
   const nameInput = useRef<HTMLInputElement>(null);
   const dialogRef = useDialogFocus<HTMLFormElement>(open, onClose, nameInput);
@@ -24,6 +26,7 @@ export function GrowthItemFormDialog({ open, track, onClose, onSave }: Props) {
     if (!open) return;
     setName(track?.title ?? "");
     setIcon(track?.icon || "🌱");
+    setStartedDate(track?.startedDate ?? track?.createdAt.slice(0, 10) ?? toDateKey(new Date()));
   }, [open, track]);
 
   if (!open) return null;
@@ -38,6 +41,7 @@ export function GrowthItemFormDialog({ open, track, onClose, onSave }: Props) {
         id: track?.id ?? crypto.randomUUID(),
         title: trimmed,
         icon: icon.trim() || "🌱",
+        startedDate,
         currentStage: track?.currentStage ?? "",
         goal: track?.goal ?? "",
         nextStep: track?.nextStep ?? "",
@@ -75,7 +79,8 @@ export function GrowthItemFormDialog({ open, track, onClose, onSave }: Props) {
         </header>
         <label>Name<input ref={nameInput} value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Piano" required /></label>
         <label>Icon or emoji<input value={icon} onChange={(event) => setIcon(event.target.value)} placeholder="🎹" maxLength={8} /></label>
-        <button className="primaryButton" type="submit" disabled={busy || !name.trim()}>{track ? "Save changes" : "Add item"}</button>
+        <label>Started date<input type="date" value={startedDate} onChange={(event) => setStartedDate(event.target.value)} required /></label>
+        <button className="primaryButton" type="submit" disabled={busy || !name.trim() || !startedDate}>{track ? "Save changes" : "Add item"}</button>
       </form>
     </div>
   );

@@ -20,9 +20,9 @@ export type LearningWorkspaceProps = {
   onDeleteMoment: (moment: GrowthMoment) => Promise<void>;
 };
 
-const createdLabel = (createdAt: string) =>
+const startedLabel = (track: LearningTrack) =>
   new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" })
-    .format(new Date(createdAt));
+    .format(new Date(`${track.startedDate ?? track.createdAt.slice(0, 10)}T12:00:00`));
 
 export function LearningWorkspace({
   tracks,
@@ -83,7 +83,7 @@ export function LearningWorkspace({
                   <span className="growthCardIcon" aria-hidden="true">{track.icon}</span>
                   <div>
                     <strong>{track.title}</strong>
-                    <small>Created {createdLabel(track.createdAt)}</small>
+                    <small>Started {startedLabel(track)}</small>
                   </div>
                   <button className="growthEditButton" onClick={() => { setEditingTrack(track); setFormOpen(true); }}>Edit</button>
                 </div>
@@ -93,9 +93,9 @@ export function LearningWorkspace({
                 </div>
                 <div className="growthCardActions"><button
                     className={checkedInToday ? "growthCheckinButton checked" : "growthCheckinButton"}
-                    disabled={checkedInToday || busyTrackId === track.id}
+                    disabled={busyTrackId === track.id}
                     onClick={async () => { setBusyTrackId(track.id); try { await onCheckIn(track); } finally { setBusyTrackId(undefined); } }}
-                  >{checkedInToday ? "✓ Checked in today" : busyTrackId === track.id ? "Checking in…" : "Check in"}</button>
+                  >{busyTrackId === track.id ? "Saving…" : checkedInToday ? "✓ Checked in today" : "Check in"}</button>
                   <button className="growthPastButton" aria-label={`Add or edit past check-ins for ${track.title}`} title="Add past check-in" onClick={() => setDatesTrack(track)}><Plus /></button></div>
               </article>
             );

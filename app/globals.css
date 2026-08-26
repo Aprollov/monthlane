@@ -595,6 +595,7 @@ strong > .priorityMark { font-size: 9px; }
 .growthEmpty { margin: 0; color: var(--text-muted); font-family: Georgia, "Times New Roman", serif; font-size: 13px; }
 .growthDatesDialog, .growthMomentForm { display: flex; flex-direction: column; gap: 13px; }
 .growthDateFields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.growthDateFields.growthSingleDate { grid-template-columns: 1fr; }
 .growthDateFields label, .growthMomentForm label { display: flex; flex-direction: column; gap: 6px; color: var(--text-secondary); font-size: 11px; font-weight: 700; }
 .growthDateFields label small { color: var(--text-muted); font-weight: 400; }
 .growthDateFields input, .growthMomentForm input, .growthMomentForm select { min-height: 40px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-primary); padding: 0 10px; font-size: 13px; }
