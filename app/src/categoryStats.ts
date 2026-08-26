@@ -9,7 +9,7 @@ export const categoryItemCount = (
   tasks.filter((task) => task.categoryId === categoryId && !task.deletedAt && task.status !== "archived").length;
 
 
-/** When exactly one calendar shown in the sidebar is visible, new tasks auto-file into it. */
+/** When exactly one calendar shown in the sidebar is visible, new items auto-file into it. */
 export const singleVisibleCategoryId = (
   categories: Category[],
   hidden: Set<string>,

@@ -932,7 +932,7 @@ export function MonthlaneApp() {
         onClose={() => setCalendarsOpen(false)}
         onChanged={refresh}
       />
-      <EventDrawer open={drawerOpen} date={selectedDate} event={editingEvent} categories={categories} onClose={() => setDrawerOpen(false)} onSave={saveDraft} onDelete={editingEvent ? removeEvent : undefined} onConvert={editingEvent ? () => { const target = editingEvent; setDrawerOpen(false); setEditingEvent(undefined); void convertEventToTask(target); } : undefined} />
+      <EventDrawer open={drawerOpen} date={selectedDate} event={editingEvent} categories={categories} defaultCategoryId={focusCategoryId} onClose={() => setDrawerOpen(false)} onSave={saveDraft} onDelete={editingEvent ? removeEvent : undefined} onConvert={editingEvent ? () => { const target = editingEvent; setDrawerOpen(false); setEditingEvent(undefined); void convertEventToTask(target); } : undefined} />
       <SearchDrawer open={searchOpen} events={searchableEvents} tasks={tasks} categories={categories} onClose={() => setSearchOpen(false)} onSelect={(event) => {
         setSelectedDate(event.startDate);
         setVisibleMonth(new Date(Number(event.startDate.slice(0, 4)), Number(event.startDate.slice(5, 7)) - 1, 1));

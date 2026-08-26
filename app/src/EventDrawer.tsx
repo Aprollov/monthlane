@@ -10,13 +10,14 @@ type Props = {
   date: string;
   event?: CalendarEvent;
   categories: Category[];
+  defaultCategoryId?: string;
   onClose: () => void;
   onSave: (draft: EventDraft) => Promise<void>;
   onDelete?: () => Promise<void>;
   onConvert?: () => void;
 };
 
-export function EventDrawer({ open, date, event, categories, onClose, onSave, onDelete, onConvert }: Props) {
+export function EventDrawer({ open, date, event, categories, defaultCategoryId, onClose, onSave, onDelete, onConvert }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const titleId = useId();
   const titleInput = useRef<HTMLInputElement>(null);
@@ -34,11 +35,11 @@ export function EventDrawer({ open, date, event, categories, onClose, onSave, on
       notes: event.notes, categoryId: event.categoryId, recurrence: event.recurrence,
     } : {
       title: "", startDate: date, allDay: true, startTime: "09:00", endTime: "10:00",
-      notes: "", categoryId: "personal", recurrence: undefined,
+      notes: "", categoryId: defaultCategoryId ?? "personal", recurrence: undefined,
     });
     setError("");
     window.setTimeout(() => titleInput.current?.focus(), 120);
-  }, [date, event, open]);
+  }, [date, defaultCategoryId, event, open]);
 
   useEffect(() => {
     if (!open) return;
