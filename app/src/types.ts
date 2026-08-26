@@ -80,6 +80,7 @@ export type MonthlaneBackupV2 = {
   settings?: Array<{ id: string; [key: string]: unknown }>;
   learningTracks?: LearningTrack[];
   learningProgressLogs?: LearningProgressLog[];
+  growthMoments?: GrowthMoment[];
   syncMetadata?: {
     lastUpdatedByDeviceId: string;
     revision: number;
@@ -180,6 +181,18 @@ export type LearningProgressLog = {
   duration?: number;
   stage?: string;
   notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+  deviceId: string;
+};
+
+export type GrowthMoment = {
+  id: string;
+  name: string;
+  icon: string;
+  date: string;
+  type: "since" | "until";
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;

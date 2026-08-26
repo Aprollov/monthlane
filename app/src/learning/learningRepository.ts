@@ -1,5 +1,5 @@
 import { openMonthlaneDb } from "../database.ts";
-import type { LearningProgressLog, LearningTrack } from "../types.ts";
+import type { GrowthMoment, LearningProgressLog, LearningTrack } from "../types.ts";
 
 const requestValue = <T,>(request: IDBRequest<T>) =>
   new Promise<T>((resolve, reject) => {
@@ -55,6 +55,29 @@ export const learningRepository = {
     try {
       const tx = db.transaction("learningProgressLogs", "readwrite");
       tx.objectStore("learningProgressLogs").put(log);
+      await transactionDone(tx);
+    } finally {
+      db.close();
+    }
+  },
+
+  async listMoments(): Promise<GrowthMoment[]> {
+    const db = await openMonthlaneDb();
+    try {
+      const moments = await requestValue<GrowthMoment[]>(
+        db.transaction("growthMoments").objectStore("growthMoments").getAll(),
+      );
+      return moments.filter((moment) => !moment.deletedAt);
+    } finally {
+      db.close();
+    }
+  },
+
+  async saveMoment(moment: GrowthMoment) {
+    const db = await openMonthlaneDb();
+    try {
+      const tx = db.transaction("growthMoments", "readwrite");
+      tx.objectStore("growthMoments").put(moment);
       await transactionDone(tx);
     } finally {
       db.close();

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { growthCheckinDates, growthCounts } from "../app/src/learning/growthStats.ts";
+import { dateRange, growthCheckinDates, growthCounts, momentDayCount } from "../app/src/learning/growthStats.ts";
 
 const track = {
   id: "piano",
@@ -45,4 +45,15 @@ test("Growth counts total and current-month check-in dates", () => {
     growthCounts(["2026-07-31", "2026-08-01", "2026-08-25"], "2026-08-25"),
     { total: 3, month: 2 },
   );
+});
+
+test("custom check-ins expand an inclusive local date range", () => {
+  assert.deepEqual(dateRange("2026-08-23", "2026-08-25"), ["2026-08-23", "2026-08-24", "2026-08-25"]);
+  assert.deepEqual(dateRange("2026-08-25"), ["2026-08-25"]);
+  assert.deepEqual(dateRange("2026-08-25", "2026-08-23"), []);
+});
+
+test("Moments count days since or until without UTC shifts", () => {
+  assert.equal(momentDayCount("2026-08-20", "2026-08-26", "since"), 6);
+  assert.equal(momentDayCount("2026-10-02", "2026-08-26", "until"), 37);
 });

@@ -561,7 +561,7 @@ strong > .priorityMark { font-size: 9px; }
 .growthSection { display: grid; gap: 12px; }
 .growthSection > h2 { margin: 0; color: var(--text-secondary); font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
 .growthGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
-.growthCard { display: flex; flex-direction: column; gap: 16px; min-height: 190px; padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.growthCard { display: flex; flex-direction: column; gap: 12px; min-height: 150px; padding: 17px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 .growthCardHead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 11px; }
 .growthCardIcon { font-size: 24px; line-height: 1; }
 .growthCardHead > div { display: grid; gap: 4px; min-width: 0; }
@@ -569,12 +569,43 @@ strong > .priorityMark { font-size: 9px; }
 .growthCardHead small { color: var(--text-muted); font-size: 10px; }
 .growthEditButton { border: 0; background: transparent; color: var(--text-muted); padding: 2px 0; font-size: 10px; cursor: pointer; }
 .growthEditButton:hover { color: var(--accent); }
-.growthCounts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.growthCounts > span { display: grid; gap: 3px; padding: 10px 12px; border-radius: 9px; background: var(--surface-secondary); }
-.growthCounts strong { font-size: 18px; font-weight: 650; }
-.growthCounts small { color: var(--text-muted); font-size: 9px; letter-spacing: .04em; text-transform: uppercase; }
-.growthCheckinButton { width: 100%; margin-top: auto; justify-content: center; }
-.growthCheckinButton.checked { color: var(--accent); border-color: #b8c8ba; background: var(--accent-soft); opacity: 1; }
+.growthCounts { display: flex; align-items: baseline; gap: 5px; }
+.growthCounts > span { display: inline-flex; align-items: baseline; gap: 3px; }
+.growthCounts > span + span::before { content: "·"; margin-right: 2px; color: var(--text-muted); }
+.growthCounts strong { font-size: 13px; font-weight: 650; }
+.growthCounts small { color: var(--text-muted); font-size: 11px; }
+.growthCardActions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; margin-top: auto; }
+.growthCheckinButton, .growthPastButton { min-height: 36px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--accent); padding: 0 12px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.growthPastButton { width: 36px; display: grid; place-items: center; padding: 0; }
+.growthPastButton svg { width: 14px; }
+.growthCheckinButton:hover, .growthPastButton:hover { background: var(--accent-soft); border-color: #b8c8ba; }
+.growthCheckinButton.checked { border-color: transparent; background: transparent; color: var(--accent); font-weight: 600; cursor: default; }
+.growthSectionHeading { display: flex; align-items: center; justify-content: space-between; }
+.growthSectionHeading h2 { margin: 0; color: var(--text-secondary); font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.growthSectionHeading button { min-height: 34px; display: inline-flex; align-items: center; gap: 5px; border: 0; background: transparent; color: var(--accent); font-size: 11px; font-weight: 700; cursor: pointer; }
+.growthSectionHeading button svg { width: 13px; }
+.momentsSection { margin-bottom: 28px; }
+.momentList { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.momentCard { min-height: 72px; display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 10px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); padding: 12px 14px; text-align: left; cursor: pointer; }
+.momentCard:hover { background: var(--surface-secondary); }
+.momentIcon { font-size: 23px; text-align: center; }
+.momentCard > span:last-child { display: grid; gap: 3px; min-width: 0; }
+.momentCard strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.momentCard small { color: var(--text-muted); font-size: 11px; }
+.growthEmpty { margin: 0; color: var(--text-muted); font-family: Georgia, "Times New Roman", serif; font-size: 13px; }
+.growthDatesDialog, .growthMomentForm { display: flex; flex-direction: column; gap: 13px; }
+.growthDateFields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.growthDateFields label, .growthMomentForm label { display: flex; flex-direction: column; gap: 6px; color: var(--text-secondary); font-size: 11px; font-weight: 700; }
+.growthDateFields label small { color: var(--text-muted); font-weight: 400; }
+.growthDateFields input, .growthMomentForm input, .growthMomentForm select { min-height: 40px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-primary); padding: 0 10px; font-size: 13px; }
+.growthAddDatesButton { justify-content: center; min-height: 42px; }
+.growthDateHistory { max-height: 220px; overflow: auto; border-top: 1px solid var(--border); padding-top: 12px; }
+.growthDateHistory h3 { margin: 0 0 6px; font-size: 10px; color: var(--text-muted); letter-spacing: .08em; text-transform: uppercase; }
+.growthDateHistory ul { list-style: none; margin: 0; padding: 0; }
+.growthDateHistory li { min-height: 38px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); font-size: 12px; }
+.growthDateHistory li:first-child { border-top: 0; }
+.growthDateHistory button { min-height: 34px; border: 0; background: transparent; color: var(--danger); font-size: 10px; cursor: pointer; }
+.growthMomentFormActions { display: flex; justify-content: flex-end; gap: 8px; }
 .taskSourceBadge { border-radius: 99px; background: var(--accent-soft); color: var(--accent); padding: 2px 6px; font-weight: 700; }
 
 /* Learning track detail */
@@ -688,12 +719,16 @@ strong > .priorityMark { font-size: 9px; }
   .growthCardHead strong { font-size: 15px; }
   .growthCardHead small { font-size: 10px; }
   .growthEditButton { min-width: 44px; min-height: 44px; margin: -8px -4px -8px 0; border-radius: 8px; }
-  .growthCounts { display: flex; align-items: baseline; gap: 5px; padding-left: 44px; }
-  .growthCounts > span { display: inline-flex; align-items: baseline; gap: 3px; padding: 0; background: transparent; }
-  .growthCounts > span + span::before { content: "·"; margin-right: 2px; color: var(--text-muted); }
-  .growthCounts strong { font-size: 13px; font-weight: 650; }
-  .growthCounts small { font-size: 11px; letter-spacing: 0; text-transform: none; }
-  .growthCheckinButton { min-height: 48px; border-radius: 10px; font-size: 13px; }
+  .momentList { display: block; }
+  .momentCard { width: 100%; min-height: 66px; border: 0; border-top: 1px solid var(--border); border-radius: 0; background: transparent; padding: 11px 2px; }
+  .momentCard:last-child { border-bottom: 1px solid var(--border); }
+  .growthCounts { padding-left: 44px; }
+  .growthCardActions { padding-left: 44px; justify-content: flex-start; }
+  .growthCheckinButton { min-height: 44px; }
+  .growthPastButton { width: 44px; min-height: 44px; }
+  .growthDateFields { grid-template-columns: 1fr; }
+  .growthDatesDialog, .growthMomentForm { width: calc(100% - 24px); max-height: calc(100dvh - 24px); overflow: auto; }
+  .growthMomentFormActions > button { min-height: 44px; }
   .learningGrid, .learningArchivedGrid, .learningColumns { grid-template-columns: 1fr; }
   .learningHeroBody h1 { font-size: 24px; }
   .learningNextStep { padding: 20px; }

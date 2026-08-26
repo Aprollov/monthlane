@@ -31,7 +31,7 @@ import { learningRepository } from "./learning/learningRepository";
 import type { LearningWorkspaceProps } from "./learning/LearningWorkspace";
 import { BookOpen, CalendarIcon, ChevronLeft, ChevronRight, InboxIcon, Menu, Plus, Search, Settings, Sliders, Sun } from "./icons";
 import { expandEvents, previousDateKey } from "./recurrence";
-import type { CalendarEvent, Category, CreateReadingItemInput, CreateTaskInput, EventDraft, FlowBucket, FlowTask, LearningProgressLog, LearningTrack, ReadingItem, RecurrenceException, TaskBucket, UpdateTaskInput } from "./types";
+import type { CalendarEvent, Category, CreateReadingItemInput, CreateTaskInput, EventDraft, FlowBucket, FlowTask, GrowthMoment, LearningProgressLog, LearningTrack, ReadingItem, RecurrenceException, TaskBucket, UpdateTaskInput } from "./types";
 import { openSmartLink } from "./flow/smartLinks";
 import { useCalendarDrag } from "./useCalendarDrag";
 
@@ -48,6 +48,7 @@ export function MonthlaneApp() {
   const [readingItems, setReadingItems] = useState<ReadingItem[]>([]);
   const [learningTracks, setLearningTracks] = useState<LearningTrack[]>([]);
   const [learningLogs, setLearningLogs] = useState<LearningProgressLog[]>([]);
+  const [growthMoments, setGrowthMoments] = useState<GrowthMoment[]>([]);
   const [activeView, setActiveView] = useState<FlowView>("month");
   const [mobileFlowBucket, setMobileFlowBucket] = useState<FlowBucket>("today");
   const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(() => {
@@ -76,7 +77,7 @@ export function MonthlaneApp() {
     await migrateLegacyCategories();
     await cleanupSyncConflictTasks();
     await readingRepository.migrateLegacyTasks();
-    const [storedEvents, storedCategories, storedExceptions, storedTasks, storedReadingItems, storedTracks, storedLogs] = await Promise.all([
+    const [storedEvents, storedCategories, storedExceptions, storedTasks, storedReadingItems, storedTracks, storedLogs, storedMoments] = await Promise.all([
       listEvents(),
       listCategories(),
       listExceptions(),
@@ -84,6 +85,7 @@ export function MonthlaneApp() {
       readingRepository.getAll(),
       learningRepository.listTracks(),
       learningRepository.listLogs(),
+      learningRepository.listMoments(),
     ]);
     setEvents(storedEvents);
     setCategories(storedCategories);
@@ -92,6 +94,7 @@ export function MonthlaneApp() {
     setReadingItems(storedReadingItems);
     setLearningTracks(storedTracks);
     setLearningLogs(storedLogs);
+    setGrowthMoments(storedMoments);
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
@@ -417,12 +420,52 @@ export function MonthlaneApp() {
     notify("Checked in.");
   };
 
+  const addGrowthCheckins = async (track: LearningTrack, dates: string[]) => {
+    const existing = new Set(learningLogs.filter((log) => log.learningTrackId === track.id && !log.deletedAt).map((log) => log.date));
+    const timestamp = new Date().toISOString();
+    for (const date of dates.filter((date) => !existing.has(date))) {
+      await learningRepository.saveLog({ id: `${track.id}:${date}`, learningTrackId: track.id, date, title: "Check-in", createdAt: timestamp, updatedAt: timestamp, deviceId: getDeviceId() });
+    }
+    await refresh();
+    void syncConnectedCloud().then((synced) => { if (synced) void refresh(); }).catch(() => {});
+    notify(dates.length === 1 ? "Check-in added." : `${dates.length} check-ins added.`);
+  };
+
+  const removeGrowthCheckin = async (track: LearningTrack, date: string) => {
+    const timestamp = new Date().toISOString();
+    const matches = learningLogs.filter((log) => log.learningTrackId === track.id && log.date === date && !log.deletedAt);
+    for (const log of matches) await learningRepository.saveLog({ ...log, deletedAt: timestamp, updatedAt: timestamp });
+    await refresh();
+    void syncConnectedCloud().then((synced) => { if (synced) void refresh(); }).catch(() => {});
+    notify("Check-in removed.");
+  };
+
+  const saveGrowthMoment = async (moment: GrowthMoment) => {
+    await learningRepository.saveMoment(moment);
+    await refresh();
+    void syncConnectedCloud().then((synced) => { if (synced) void refresh(); }).catch(() => {});
+    notify("Moment saved.");
+  };
+
+  const deleteGrowthMoment = async (moment: GrowthMoment) => {
+    const timestamp = new Date().toISOString();
+    await learningRepository.saveMoment({ ...moment, deletedAt: timestamp, updatedAt: timestamp });
+    await refresh();
+    void syncConnectedCloud().then((synced) => { if (synced) void refresh(); }).catch(() => {});
+    notify("Moment deleted.");
+  };
+
   const learningWorkspaceProps: LearningWorkspaceProps = {
     tracks: learningTracks,
     logs: learningLogs,
+    moments: growthMoments,
     today: todayKey,
     onSaveTrack: saveLearningTrack,
     onCheckIn: checkInGrowth,
+    onAddCheckins: addGrowthCheckins,
+    onRemoveCheckin: removeGrowthCheckin,
+    onSaveMoment: saveGrowthMoment,
+    onDeleteMoment: deleteGrowthMoment,
   };
 
   const openReadingItem = async (item: ReadingItem) => {
