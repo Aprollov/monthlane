@@ -586,12 +586,21 @@ strong > .priorityMark { font-size: 9px; }
 .growthSectionHeading button svg { width: 13px; }
 .momentsSection { margin-bottom: 28px; }
 .momentList { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-.momentCard { min-height: 72px; display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 10px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); padding: 12px 14px; text-align: left; cursor: pointer; }
+.momentCard { min-height: 72px; display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: start; gap: 10px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); padding: 12px 14px; text-align: left; }
 .momentCard:hover { background: var(--surface-secondary); }
 .momentIcon { font-size: 23px; text-align: center; }
-.momentCard > span:last-child { display: grid; gap: 3px; min-width: 0; }
+.momentBody { display: grid; gap: 4px; min-width: 0; }
+.momentTitleRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.momentEditButton { min-height: 28px; border: 0; background: transparent; color: var(--text-muted); padding: 0 2px; font-size: 10px; cursor: pointer; }
 .momentCard strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .momentCard small { color: var(--text-muted); font-size: 11px; }
+.momentUnitSelect { position: relative; display: inline-flex; align-items: center; width: fit-content; color: var(--text-primary); font-size: 14px; font-weight: 700; }
+.momentUnitSelect::after { content: "⌄"; margin-left: 4px; color: var(--text-muted); font-size: 11px; }
+.momentUnitSelect select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.momentProgressBlock { display: grid; gap: 5px; margin-top: 4px; }
+.momentProgressTrack { width: 100%; height: 3px; overflow: hidden; border-radius: 99px; background: var(--border); }
+.momentProgressTrack span { display: block; height: 100%; border-radius: inherit; background: var(--accent-muted); }
+.momentCalendarName { color: var(--accent) !important; margin-top: 2px; }
 .growthEmpty { margin: 0; color: var(--text-muted); font-family: Georgia, "Times New Roman", serif; font-size: 13px; }
 .growthDatesDialog, .growthMomentForm { display: flex; flex-direction: column; gap: 13px; }
 .growthDateFields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -599,6 +608,8 @@ strong > .priorityMark { font-size: 9px; }
 .growthDateFields label, .growthMomentForm label { display: flex; flex-direction: column; gap: 6px; color: var(--text-secondary); font-size: 11px; font-weight: 700; }
 .growthDateFields label small { color: var(--text-muted); font-weight: 400; }
 .growthDateFields input, .growthMomentForm input, .growthMomentForm select { min-height: 40px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-primary); padding: 0 10px; font-size: 13px; }
+.growthMomentForm .momentCalendarToggle { min-height: 44px; flex-direction: row; align-items: center; justify-content: space-between; }
+.growthMomentForm .momentCalendarToggle input { width: 42px; min-height: 24px; }
 .growthAddDatesButton { justify-content: center; min-height: 42px; }
 .growthDisclosure, .growthHistoryToggle { width: 100%; min-height: 40px; border: 0; background: transparent; color: var(--text-secondary); padding: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; font: inherit; cursor: pointer; }
 .growthDisclosure { font-size: 12px; border-top: 1px solid var(--border); }
@@ -729,6 +740,7 @@ strong > .priorityMark { font-size: 9px; }
   .momentList { display: block; }
   .momentCard { width: 100%; min-height: 66px; border: 0; border-top: 1px solid var(--border); border-radius: 0; background: transparent; padding: 11px 2px; }
   .momentCard:last-child { border-bottom: 1px solid var(--border); }
+  .momentEditButton, .momentUnitSelect { min-height: 44px; }
   .growthCounts { padding-left: 44px; }
   .growthCardActions { padding-left: 44px; justify-content: flex-start; }
   .growthCheckinButton { min-height: 44px; }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getDeviceId } from "../device";
 import { X } from "../icons";
-import type { GrowthMoment, LearningTrack } from "../types";
+import { FALLBACK_CATEGORY_ID, type Category, type GrowthMoment, type LearningTrack } from "../types";
 import { useDialogFocus } from "../useDialogFocus";
 import { trailingDateRange } from "./growthStats";
 
@@ -63,9 +63,10 @@ export function CheckinDatesDialog({
   </div>;
 }
 
-export function MomentFormDialog({ open, moment, onClose, onSave, onDelete }: {
+export function MomentFormDialog({ open, moment, categories, onClose, onSave, onDelete }: {
   open: boolean;
   moment?: GrowthMoment;
+  categories: Category[];
   onClose: () => void;
   onSave: (moment: GrowthMoment) => Promise<void>;
   onDelete: (moment: GrowthMoment) => Promise<void>;
@@ -74,10 +75,13 @@ export function MomentFormDialog({ open, moment, onClose, onSave, onDelete }: {
   const [icon, setIcon] = useState("❤️");
   const [date, setDate] = useState("");
   const [type, setType] = useState<"since" | "until">("since");
+  const [calendarEnabled, setCalendarEnabled] = useState(false);
+  const [calendarId, setCalendarId] = useState("");
   const [busy, setBusy] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
   const dialogRef = useDialogFocus<HTMLFormElement>(open, onClose, nameRef);
-  useEffect(() => { if (open) { setName(moment?.name ?? ""); setIcon(moment?.icon ?? "❤️"); setDate(moment?.date ?? ""); setType(moment?.type ?? "since"); } }, [open, moment]);
+  const availableCalendars = categories.filter((category) => category.id !== FALLBACK_CATEGORY_ID);
+  useEffect(() => { if (open) { setName(moment?.name ?? ""); setIcon(moment?.icon ?? "❤️"); setDate(moment?.date ?? ""); setType(moment?.type ?? "since"); setCalendarEnabled(moment?.calendarReminder?.enabled ?? false); setCalendarId(moment?.calendarReminder?.calendarId ?? availableCalendars.find((category) => category.id === "personal")?.id ?? availableCalendars[0]?.id ?? ""); } }, [categories, open, moment]);
   if (!open) return null;
   return <div className="scopeScrim" role="presentation" onClick={onClose}>
     <form ref={dialogRef} className="scopeDialog growthMomentForm" role="dialog" aria-modal="true" aria-labelledby="moment-form-title" onClick={(event) => event.stopPropagation()} onSubmit={async (event) => {
@@ -85,13 +89,15 @@ export function MomentFormDialog({ open, moment, onClose, onSave, onDelete }: {
       if (!name.trim() || !date || busy) return;
       setBusy(true);
       const timestamp = new Date().toISOString();
-      try { await onSave({ id: moment?.id ?? crypto.randomUUID(), name: name.trim(), icon: icon.trim() || "❤️", date, type, createdAt: moment?.createdAt ?? timestamp, updatedAt: timestamp, deviceId: moment?.deviceId ?? getDeviceId() }); onClose(); } finally { setBusy(false); }
+      try { await onSave({ id: moment?.id ?? crypto.randomUUID(), name: name.trim(), icon: icon.trim() || "❤️", date, type, displayUnit: moment?.displayUnit ?? "days", calendarReminder: calendarEnabled ? { enabled: true, calendarId } : { enabled: false }, createdAt: moment?.createdAt ?? timestamp, updatedAt: timestamp, deviceId: moment?.deviceId ?? getDeviceId() }); onClose(); } finally { setBusy(false); }
     }}>
       <header className="scopeHeader"><div><p className="eyebrow">A date that matters</p><h2 id="moment-form-title">{moment ? "Edit Moment" : "Add Moment"}</h2></div><button type="button" className="iconButton" onClick={onClose} aria-label="Close Moment form"><X /></button></header>
       <label>Name<input ref={nameRef} value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Japan Trip" required /></label>
       <label>Emoji or icon<input value={icon} onChange={(event) => setIcon(event.target.value)} maxLength={8} /></label>
       <label>Date<input type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></label>
       <label>Type<select value={type} onChange={(event) => setType(event.target.value as "since" | "until")}><option value="since">Since</option><option value="until">Until</option></select></label>
+      <label className="momentCalendarToggle"><span>Add to Calendar</span><input type="checkbox" role="switch" checked={calendarEnabled} onChange={(event) => setCalendarEnabled(event.target.checked)} /></label>
+      {calendarEnabled && <label>Calendar<select value={calendarId} onChange={(event) => setCalendarId(event.target.value)}>{availableCalendars.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>}
       <div className="growthMomentFormActions">{moment && <button type="button" className="dangerOutlineButton" onClick={() => { if (window.confirm("Delete this Moment?")) void onDelete(moment).then(onClose); }}>Delete</button>}<button className="primaryButton" disabled={busy || !name.trim() || !date}>{busy ? "Saving…" : "Save Moment"}</button></div>
     </form>
   </div>;

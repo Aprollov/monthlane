@@ -29,6 +29,7 @@ import { taskRepository } from "./flow/taskRepository";
 import { readingRepository } from "./flow/readingRepository";
 import { learningRepository } from "./learning/learningRepository";
 import type { LearningWorkspaceProps } from "./learning/LearningWorkspace";
+import { momentIdForEvent, momentReminderEvents } from "./learning/momentHelpers";
 import { BookOpen, CalendarIcon, ChevronLeft, ChevronRight, InboxIcon, Menu, Plus, Search, Settings, Sliders, Sun } from "./icons";
 import { expandEvents, previousDateKey } from "./recurrence";
 import type { CalendarEvent, Category, CreateReadingItemInput, CreateTaskInput, EventDraft, FlowBucket, FlowTask, GrowthMoment, LearningProgressLog, LearningTrack, ReadingItem, RecurrenceException, TaskBucket, UpdateTaskInput } from "./types";
@@ -112,9 +113,11 @@ export function MonthlaneApp() {
   useEffect(() => {
     localStorage.setItem("monthlane-last-month", toDateKey(visibleMonth));
   }, [visibleMonth]);
+  const momentEvents = useMemo(() => momentReminderEvents(growthMoments), [growthMoments]);
+  const calendarSourceEvents = useMemo(() => [...events, ...momentEvents], [events, momentEvents]);
   const focusCategoryId = useMemo(
-    () => singleVisibleCategoryId(categories, hiddenCategories, FALLBACK_CATEGORY_ID, events, tasks),
-    [categories, hiddenCategories, events, tasks],
+    () => singleVisibleCategoryId(categories, hiddenCategories, FALLBACK_CATEGORY_ID, calendarSourceEvents, tasks),
+    [calendarSourceEvents, categories, hiddenCategories, tasks],
   );
 
   const notify = useCallback((message: string, action?: { label: string; run: () => void }) => {
@@ -188,8 +191,8 @@ export function MonthlaneApp() {
 
   const days = useMemo(() => buildMonthGrid(visibleMonth), [visibleMonth]);
   const expandedEvents = useMemo(
-    () => expandEvents(events, exceptions, toDateKey(days[0]), toDateKey(days[days.length - 1])),
-    [days, events, exceptions],
+    () => expandEvents(calendarSourceEvents, exceptions, toDateKey(days[0]), toDateKey(days[days.length - 1])),
+    [calendarSourceEvents, days, exceptions],
   );
   const visibleEvents = useMemo(
     () => expandedEvents.filter((event) => !hiddenCategories.has(event.categoryId)),
@@ -355,6 +358,12 @@ export function MonthlaneApp() {
   };
 
   const selectEvent = (event: CalendarEvent) => {
+    if (momentIdForEvent(event)) {
+      setDayPanelOpen(false);
+      setActiveView("learning");
+      notify("Moment reminders are managed in Growth.");
+      return;
+    }
     setEditingEvent(event);
     setSelectedDate(event.startDate);
     setDrawerOpen(true);
@@ -363,9 +372,9 @@ export function MonthlaneApp() {
   const categoryById = (id: string) => categories.find((category) => category.id === id);
   const todayKey = toDateKey(today);
   const todayExpandedEvents = useMemo(
-    () => expandEvents(events, exceptions, todayKey, todayKey)
+    () => expandEvents(calendarSourceEvents, exceptions, todayKey, todayKey)
       .filter((event) => !hiddenCategories.has(event.categoryId)),
-    [events, exceptions, hiddenCategories, todayKey],
+    [calendarSourceEvents, exceptions, hiddenCategories, todayKey],
   );
 
   const selectView = (view: FlowView) => {
@@ -464,6 +473,7 @@ export function MonthlaneApp() {
     tracks: learningTracks,
     logs: learningLogs,
     moments: growthMoments,
+    categories,
     today: todayKey,
     onSaveTrack: saveLearningTrack,
     onCheckIn: checkInGrowth,
@@ -682,7 +692,7 @@ export function MonthlaneApp() {
             <div className="sectionTitle"><span>Calendars</span><Sliders /></div>
             <div className="categoryList">
               {categories
-                .filter((category) => category.id !== FALLBACK_CATEGORY_ID && categoryItemCount(category.id, events, tasks) > 0)
+                .filter((category) => category.id !== FALLBACK_CATEGORY_ID && categoryItemCount(category.id, calendarSourceEvents, tasks) > 0)
                 .map((category) => {
                 const visible = !hiddenCategories.has(category.id);
                 return (
@@ -696,7 +706,7 @@ export function MonthlaneApp() {
                     }} />
                     <span className="categoryDot" style={{ background: category.color }} />
                     <span>{category.name}</span>
-                    <small>{categoryItemCount(category.id, events, tasks)}</small>
+                    <small>{categoryItemCount(category.id, calendarSourceEvents, tasks)}</small>
                   </label>
                 );
               })}
@@ -768,7 +778,7 @@ export function MonthlaneApp() {
                             className={`eventItem ${calendarDrag.isSource(dragItem) ? "calendarDragSource" : ""}`}
                             key={entry.id}
                             title={entry.event.title}
-                            onPointerDown={(event) => calendarDrag.onPointerDown(event, dragItem)}
+                            onPointerDown={momentIdForEvent(entry.event) ? undefined : (event) => calendarDrag.onPointerDown(event, dragItem)}
                             onClick={(clickEvent) => {
                             if (calendarDrag.suppressClick()) {
                               clickEvent.preventDefault();
@@ -838,7 +848,7 @@ export function MonthlaneApp() {
               <button
                 className={`mobileEventRow ${calendarDrag.isSource(calendarDragItem(entry)) ? "calendarDragSource" : ""}`}
                 key={entry.id}
-                onPointerDown={(event) => calendarDrag.onPointerDown(event, calendarDragItem(entry))}
+                onPointerDown={momentIdForEvent(entry.event) ? undefined : (event) => calendarDrag.onPointerDown(event, calendarDragItem(entry))}
                 onClick={(event) => {
                   if (calendarDrag.suppressClick()) {
                     event.preventDefault();
@@ -932,7 +942,7 @@ export function MonthlaneApp() {
       <CalendarsDialog
         open={calendarsOpen}
         categories={categories}
-        events={events}
+        events={calendarSourceEvents}
         tasks={tasks}
         onClose={() => setCalendarsOpen(false)}
         onChanged={refresh}

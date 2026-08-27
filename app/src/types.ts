@@ -194,6 +194,11 @@ export type GrowthMoment = {
   icon: string;
   date: string;
   type: "since" | "until";
+  displayUnit?: "days" | "months" | "years";
+  calendarReminder?: {
+    enabled: boolean;
+    calendarId?: string;
+  };
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;

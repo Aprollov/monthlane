@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { Plus } from "../icons";
-import type { GrowthMoment, LearningProgressLog, LearningTrack } from "../types";
+import type { Category, GrowthMoment, LearningProgressLog, LearningTrack } from "../types";
 import { CheckinDatesDialog, MomentFormDialog } from "./GrowthDialogs";
 import { GrowthItemFormDialog } from "./LearningTrackFormDialog";
-import { growthCheckinDates, growthCounts, momentDayCount } from "./growthStats";
+import { growthCheckinDates, growthCounts } from "./growthStats";
+import { momentProgress, momentValueLabel, type MomentUnit } from "./momentHelpers";
 
 export type LearningWorkspaceProps = {
   tracks: LearningTrack[];
   logs: LearningProgressLog[];
   moments: GrowthMoment[];
+  categories: Category[];
   today: string;
   onSaveTrack: (track: LearningTrack) => Promise<void>;
   onCheckIn: (track: LearningTrack) => Promise<void>;
@@ -28,6 +30,7 @@ export function LearningWorkspace({
   tracks,
   logs,
   moments,
+  categories,
   today,
   onSaveTrack,
   onCheckIn,
@@ -62,11 +65,19 @@ export function LearningWorkspace({
       <section className="growthSection momentsSection" aria-labelledby="moments-title">
         <div className="growthSectionHeading"><h2 id="moments-title">Moments</h2><button onClick={() => { setEditingMoment(undefined); setMomentFormOpen(true); }}><Plus />Add moment</button></div>
         {moments.length ? <div className="momentList">{[...moments].sort((a, b) => a.createdAt.localeCompare(b.createdAt)).map((moment) => {
-          const days = momentDayCount(moment.date, today, moment.type);
-          return <button className="momentCard" key={moment.id} onClick={() => { setEditingMoment(moment); setMomentFormOpen(true); }}>
+          const progress = momentProgress(moment, today);
+          const dateLabel = new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(`${moment.date}T12:00:00`));
+          const calendarName = categories.find((category) => category.id === moment.calendarReminder?.calendarId)?.name;
+          return <article className="momentCard" key={moment.id}>
             <span className="momentIcon" aria-hidden="true">{moment.icon}</span>
-            <span><strong>{moment.name}</strong><small>{days} {days === 1 ? "day" : "days"} {moment.type === "since" ? "together" : "left"}</small></span>
-          </button>;
+            <div className="momentBody">
+              <div className="momentTitleRow"><strong>{moment.name}</strong><button className="momentEditButton" onClick={() => { setEditingMoment(moment); setMomentFormOpen(true); }}>Edit</button></div>
+              <label className="momentUnitSelect"><span>{momentValueLabel(moment, today)}</span><select aria-label={`Time unit for ${moment.name}`} value={moment.displayUnit ?? "days"} onChange={(event) => void onSaveMoment({ ...moment, displayUnit: event.target.value as MomentUnit, updatedAt: new Date().toISOString() })}><option value="days">Days</option><option value="months">Months</option><option value="years">Years</option></select></label>
+              <small>{moment.type} {dateLabel}</small>
+              {progress && <div className="momentProgressBlock">{progress.nextDate && <small>Next anniversary · {new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(`${progress.nextDate}T12:00:00`))}</small>}<div className="momentProgressTrack" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress.ratio * 100)}><span style={{ width: `${progress.ratio * 100}%` }} /></div></div>}
+              {calendarName && moment.calendarReminder?.enabled && <small className="momentCalendarName">{calendarName}</small>}
+            </div>
+          </article>;
         })}</div> : <p className="growthEmpty">Keep a meaningful beginning or something worth looking forward to.</p>}
       </section>
 
@@ -114,7 +125,7 @@ export function LearningWorkspace({
         onSave={onSaveTrack}
       />
       <CheckinDatesDialog open={Boolean(datesTrack)} track={datesTrack} dates={datesTrack ? growthCheckinDates(datesTrack, logs) : []} today={today} onClose={() => setDatesTrack(undefined)} onAdd={(dates) => onAddCheckins(datesTrack!, dates)} onRemove={(date) => onRemoveCheckin(datesTrack!, date)} />
-      <MomentFormDialog open={momentFormOpen} moment={editingMoment} onClose={() => setMomentFormOpen(false)} onSave={onSaveMoment} onDelete={onDeleteMoment} />
+      <MomentFormDialog open={momentFormOpen} moment={editingMoment} categories={categories} onClose={() => setMomentFormOpen(false)} onSave={onSaveMoment} onDelete={onDeleteMoment} />
     </section>
   );
 }
