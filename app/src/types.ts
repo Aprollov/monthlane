@@ -120,6 +120,7 @@ export type FlowTask = {
   recurrence?: RecurrenceRule;
   completedDates?: string[];
   priority?: TaskPriority;
+  showInMonthView?: boolean;
   sortOrder: number;
   completedAt?: string;
   archivedAt?: string;

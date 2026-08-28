@@ -19,6 +19,9 @@ export const priorityMark = (priority?: TaskPriority) =>
 export const priorityColor = (priority?: TaskPriority) =>
   priority === "high" ? "#d96c5f" : priority === "low" ? "#c8c9c2" : "#d9b25e";
 
+/** Old tasks predate this preference, so only an explicit false hides them from Month View. */
+export const shouldShowTaskInMonthView = (task: FlowTask) => task.showInMonthView !== false;
+
 const typeRank = (entry: CalendarEntry) => (entry.type === "event" ? 0 : 1);
 
 const entryRank = (entry: CalendarEntry) => {
@@ -77,7 +80,9 @@ export const groupCalendarEntries = (
 export const activeGridEntries = (entriesByDate: Map<string, CalendarEntry[]>) => {
   const result = new Map<string, CalendarEntry[]>();
   for (const [date, entries] of entriesByDate) {
-    const visible = entries.filter((entry) => entry.type === "event" || !isTaskDoneOn(entry.task, date));
+    const visible = entries.filter((entry) => entry.type === "event" || (
+      shouldShowTaskInMonthView(entry.task) && !isTaskDoneOn(entry.task, date)
+    ));
     if (visible.length) result.set(date, visible);
   }
   return result;

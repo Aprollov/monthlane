@@ -30,6 +30,7 @@ const draftFromTask = (task: FlowTask): UpdateTaskInput => ({
   estimatedMinutes: task.estimatedMinutes,
   recurrence: task.recurrence,
   priority: task.priority,
+  showInMonthView: task.showInMonthView ?? true,
   status: task.status,
 });
 
@@ -48,7 +49,7 @@ const repeatValue = (rule?: RecurrenceRule) => {
 export function TaskEditorDrawer({ task, categories, today, onClose, onSave, onDelete, onConvert, onToggleDone }: Props) {
   const [draft, setDraft] = useState<UpdateTaskInput>(() => draftFromTask(task));
   const [menuOpen, setMenuOpen] = useState(false);
-  const [more, setMore] = useState(() => Boolean(task.dueDate || task.tags.length || task.estimatedMinutes));
+  const [more, setMore] = useState(() => Boolean(task.dueDate || task.tags.length || task.estimatedMinutes || task.showInMonthView === false));
   const [busy, setBusy] = useState(false);
   // The editor keeps its own snapshot of the task, so reflect the latest
   // completion toggle locally instead of waiting for the prop to refresh.
@@ -162,6 +163,7 @@ export function TaskEditorDrawer({ task, categories, today, onClose, onSave, onD
               <label>Estimated minutes<input type="number" min="1" value={draft.estimatedMinutes ?? ""} onChange={(event) => setDraft({ ...draft, estimatedMinutes: event.target.value ? Number(event.target.value) : undefined })} /></label>
             </div>
             <label>Tags<input value={(draft.tags ?? []).join(", ")} onChange={(event) => setDraft({ ...draft, tags: event.target.value.split(",").map((tag) => tag.trim()).filter(Boolean) })} placeholder="work, follow-up" /></label>
+            <label className="checkRow taskMonthVisibility"><input type="checkbox" checked={draft.showInMonthView !== false} onChange={(event) => setDraft({ ...draft, showInMonthView: event.target.checked })} /><span>Show in Month View</span></label>
           </>}
           <div className="drawerActions">
             <button className="dangerButton" type="button" disabled={busy} onClick={async () => {

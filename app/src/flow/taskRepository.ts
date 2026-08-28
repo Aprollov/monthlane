@@ -136,6 +136,7 @@ export const createTaskRepository = ({
         recurrence: input.recurrence,
         completedDates: input.completedDates,
         priority: input.priority ?? "medium",
+        showInMonthView: input.showInMonthView ?? true,
         sortOrder: input.sortOrder ?? Date.parse(timestamp),
         completedAt: input.completedAt,
         archivedAt: input.archivedAt,

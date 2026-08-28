@@ -52,6 +52,7 @@ test("creates an inbox task with stable identity metadata", async () => {
   assert.equal(task.deviceId, "device-a");
   assert.equal(task.createdAt, task.updatedAt);
   assert.deepEqual(task.tags, []);
+  assert.equal(task.showInMonthView, true);
 });
 
 test("records when a task first enters Today", async () => {
@@ -67,9 +68,11 @@ test("updates a task while preserving id, createdAt, and deviceId", async () => 
     title: "Final draft",
     bucket: "thisWeek",
     dueDate: "2026-08-01",
+    showInMonthView: false,
   });
   assert.equal(updated.title, "Final draft");
   assert.equal(updated.bucket, "thisWeek");
+  assert.equal(updated.showInMonthView, false);
   assert.equal(updated.createdAt, original.createdAt);
   assert.equal(updated.deviceId, original.deviceId);
   assert.notEqual(updated.updatedAt, original.updatedAt);
