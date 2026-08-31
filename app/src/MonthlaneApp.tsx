@@ -30,7 +30,7 @@ import { readingRepository } from "./flow/readingRepository";
 import { learningRepository } from "./learning/learningRepository";
 import type { LearningWorkspaceProps } from "./learning/LearningWorkspace";
 import { momentIdForEvent, momentReminderEvents } from "./learning/momentHelpers";
-import { BookOpen, CalendarIcon, ChevronLeft, ChevronRight, InboxIcon, Menu, Plus, Search, Settings, Sliders, Sun } from "./icons";
+import { BookOpen, CalendarIcon, ChevronLeft, ChevronRight, GraduationCap, Menu, Plus, Search, Settings, Sliders, Sun } from "./icons";
 import { expandEvents, previousDateKey } from "./recurrence";
 import type { CalendarEvent, Category, CreateReadingItemInput, CreateTaskInput, EventDraft, FlowBucket, FlowTask, GrowthMoment, LearningProgressLog, LearningTrack, ReadingItem, RecurrenceException, TaskBucket, UpdateTaskInput } from "./types";
 import { openSmartLink } from "./flow/smartLinks";
@@ -391,6 +391,11 @@ export function MonthlaneApp() {
     setSidebarOpen(false);
   };
 
+  const selectFlowBucket = (bucket: FlowBucket) => {
+    setMobileFlowBucket(bucket);
+    selectView("flow");
+  };
+
   const captureDefaultsForView = (view: FlowView): Omit<CreateTaskInput, "title"> =>
     view === "flow" ? { bucket: mobileFlowBucket } : { bucket: "inbox" };
 
@@ -696,7 +701,12 @@ export function MonthlaneApp() {
             <div className="sectionTitle"><span>Calendar</span></div>
             <button className={`sidebarNavButton ${activeView === "month" ? "active" : ""}`} onClick={() => selectView("month")}><CalendarIcon /><span>Month</span></button>
           </section>
-          <FlowNavigation activeView={activeView} onSelect={selectView} />
+          <FlowNavigation
+            activeView={activeView}
+            onSelect={selectView}
+            mobileBucket={mobileFlowBucket}
+            onSelectInbox={() => selectFlowBucket("inbox")}
+          />
           <section className="sidebarSection">
             <div className="sectionTitle"><span>Calendars</span><Sliders /></div>
             <div className="categoryList">
@@ -939,8 +949,8 @@ export function MonthlaneApp() {
 
       <nav className="mobileBottomNav" aria-label="Primary navigation">
         <button className={activeView === "month" ? "active" : ""} aria-current={activeView === "month" ? "page" : undefined} onClick={() => selectView("month")}><CalendarIcon /><span>Month</span></button>
-        <button className={activeView === "flow" && mobileFlowBucket === "today" ? "active" : ""} aria-current={activeView === "flow" && mobileFlowBucket === "today" ? "page" : undefined} onClick={() => { setMobileFlowBucket("today"); selectView("flow"); }}><Sun /><span>Today</span></button>
-        <button className={activeView === "flow" && mobileFlowBucket === "inbox" ? "active" : ""} aria-current={activeView === "flow" && mobileFlowBucket === "inbox" ? "page" : undefined} onClick={() => { setMobileFlowBucket("inbox"); selectView("flow"); }}><InboxIcon /><span>Inbox</span></button>
+        <button className={activeView === "flow" && mobileFlowBucket === "today" ? "active" : ""} aria-current={activeView === "flow" && mobileFlowBucket === "today" ? "page" : undefined} onClick={() => selectFlowBucket("today")}><Sun /><span>Today</span></button>
+        <button className={activeView === "learning" ? "active" : ""} aria-current={activeView === "learning" ? "page" : undefined} onClick={() => selectView("learning")}><GraduationCap /><span>Growth</span></button>
         <button className={activeView === "reading" ? "active" : ""} aria-current={activeView === "reading" ? "page" : undefined} onClick={() => selectView("reading")}><BookOpen /><span>Reading</span></button>
         <button className="mobileAdd" onClick={() => activeView === "learning"
           ? document.getElementById("growth-add")?.click()
