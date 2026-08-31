@@ -3,6 +3,11 @@ import type { CalendarEvent, GrowthMoment } from "../types.ts";
 
 export type MomentUnit = "days" | "months" | "years";
 
+const momentUnits: MomentUnit[] = ["days", "months", "years"];
+
+export const nextMomentUnit = (unit: MomentUnit = "days"): MomentUnit =>
+  momentUnits[(momentUnits.indexOf(unit) + 1) % momentUnits.length];
+
 const orderedDates = (moment: GrowthMoment, today: string) =>
   moment.type === "since" ? [moment.date, today] : [today, moment.date];
 

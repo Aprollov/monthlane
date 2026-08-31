@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { momentIdForEvent, momentProgress, momentReminderEvents, momentValueLabel, wholeCalendarMonths } from "../app/src/learning/momentHelpers.ts";
+import { momentIdForEvent, momentProgress, momentReminderEvents, momentValueLabel, nextMomentUnit, wholeCalendarMonths } from "../app/src/learning/momentHelpers.ts";
 
 const moment = (overrides = {}) => ({
   id: "cat-lin",
@@ -21,6 +21,12 @@ test("Moment units use exact days, whole months, and years plus remaining months
   assert.match(momentValueLabel(moment({ displayUnit: "days" }), "2026-08-27"), /^800 days$/);
   assert.equal(momentValueLabel(moment({ displayUnit: "months" }), "2026-08-27"), "26 months");
   assert.equal(momentValueLabel(moment({ displayUnit: "years" }), "2026-08-27"), "2 years 2 months");
+});
+
+test("Moment units cycle from days to months to years", () => {
+  assert.equal(nextMomentUnit("days"), "months");
+  assert.equal(nextMomentUnit("months"), "years");
+  assert.equal(nextMomentUnit("years"), "days");
 });
 
 test("Since progress measures only the current anniversary year", () => {
