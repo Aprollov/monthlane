@@ -2,16 +2,25 @@
   "name": "Monthlane",
   "short_name": "Monthlane",
   "description": "A calm, local-first personal calendar.",
-  "start_url": ".",
+  "id": "/monthlane/",
+  "start_url": "/monthlane/",
+  "scope": "/monthlane/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#f5f4ef",
   "theme_color": "#53695b",
   "icons": [
     {
-      "src": "./monthlane-icon.png",
-      "sizes": "1536x1024",
+      "src": "./monthlane-icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "./monthlane-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
