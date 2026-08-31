@@ -225,7 +225,6 @@ export const FALLBACK_CATEGORY_ID = "other";
 export const defaultCategories: Category[] = [
   ["work", "Work", "#6F8191"],
   ["life", "Life", "#758B75"],
-  ["personal", "Personal", "#8A7894"],
   ["relationships", "Relationships", "#A16F72"],
   ["finance", "Finance", "#A4835F"],
   ["other", "Other", "#858585"],

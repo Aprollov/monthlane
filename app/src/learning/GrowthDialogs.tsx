@@ -81,7 +81,7 @@ export function MomentFormDialog({ open, moment, categories, onClose, onSave, on
   const nameRef = useRef<HTMLInputElement>(null);
   const dialogRef = useDialogFocus<HTMLFormElement>(open, onClose, nameRef);
   const availableCalendars = categories.filter((category) => category.id !== FALLBACK_CATEGORY_ID);
-  useEffect(() => { if (open) { setName(moment?.name ?? ""); setIcon(moment?.icon ?? "❤️"); setDate(moment?.date ?? ""); setType(moment?.type ?? "since"); setCalendarEnabled(moment?.calendarReminder?.enabled ?? false); setCalendarId(moment?.calendarReminder?.calendarId ?? availableCalendars.find((category) => category.id === "personal")?.id ?? availableCalendars[0]?.id ?? ""); } }, [categories, open, moment]);
+  useEffect(() => { if (open) { setName(moment?.name ?? ""); setIcon(moment?.icon ?? "❤️"); setDate(moment?.date ?? ""); setType(moment?.type ?? "since"); setCalendarEnabled(moment?.calendarReminder?.enabled ?? false); setCalendarId(moment?.calendarReminder?.calendarId ?? availableCalendars.find((category) => category.id === "life")?.id ?? availableCalendars[0]?.id ?? ""); } }, [categories, open, moment]);
   if (!open) return null;
   return <div className="scopeScrim" role="presentation" onClick={onClose}>
     <form ref={dialogRef} className="scopeDialog growthMomentForm" role="dialog" aria-modal="true" aria-labelledby="moment-form-title" onClick={(event) => event.stopPropagation()} onSubmit={async (event) => {

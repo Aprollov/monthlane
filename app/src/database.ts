@@ -121,32 +121,98 @@ export const saveCategory = async (category: Category) => {
 export const LEGACY_CATEGORY_MAP: Record<string, string> = {
   anniversaries: "relationships",
   renewals: "finance",
+  personal: "life",
+  Personal: "life",
+};
+
+/** Keeps retired calendar names compatible across IndexedDB, backups, and cloud sync. */
+export const normalizeCategoryId = (categoryId?: string) =>
+  categoryId ? (LEGACY_CATEGORY_MAP[categoryId] ?? categoryId) : categoryId;
+
+const normalizeEventCategory = (event: CalendarEvent): CalendarEvent => {
+  const legacy = event as CalendarEvent & { calendar?: string; category?: string };
+  const categoryId = normalizeCategoryId(event.categoryId ?? legacy.calendar ?? legacy.category) ?? "life";
+  return {
+    ...event,
+    categoryId,
+    ...(legacy.calendar ? { calendar: normalizeCategoryId(legacy.calendar) } : {}),
+    ...(legacy.category ? { category: normalizeCategoryId(legacy.category) } : {}),
+  };
+};
+
+const normalizeTaskCategory = (task: FlowTask): FlowTask => {
+  const legacy = task as FlowTask & { calendar?: string; category?: string };
+  const categoryId = normalizeCategoryId(task.categoryId ?? legacy.calendar ?? legacy.category);
+  return {
+    ...task,
+    categoryId,
+    ...(legacy.calendar ? { calendar: normalizeCategoryId(legacy.calendar) } : {}),
+    ...(legacy.category ? { category: normalizeCategoryId(legacy.category) } : {}),
+  };
+};
+
+const normalizedBackupCategories = (categories: Category[]) => {
+  const normalized = categories.filter((category) => normalizeCategoryId(category.id) === category.id);
+  if (!normalized.some((category) => category.id === "life")) {
+    const life = defaultCategories.find((category) => category.id === "life");
+    if (life) normalized.push(life);
+  }
+  return normalized;
 };
 
 export const migrateLegacyCategories = async () => {
   const db = await openMonthlaneDb();
   try {
-    const [storedEvents, storedTasks, storedCategories] = await Promise.all([
+    const [storedEvents, storedTasks, storedCategories, storedExceptions, storedMoments] = await Promise.all([
       requestValue<CalendarEvent[]>(db.transaction("events").objectStore("events").getAll()),
       requestValue<FlowTask[]>(db.transaction("tasks").objectStore("tasks").getAll()),
       requestValue<Category[]>(db.transaction("categories").objectStore("categories").getAll()),
+      requestValue<RecurrenceException[]>(db.transaction("recurrenceExceptions").objectStore("recurrenceExceptions").getAll()),
+      requestValue<GrowthMoment[]>(db.transaction("growthMoments").objectStore("growthMoments").getAll()),
     ]);
     const timestamp = new Date().toISOString();
-    const movedEvents = storedEvents.filter((event) => LEGACY_CATEGORY_MAP[event.categoryId]);
-    const movedTasks = storedTasks.filter((task) => task.categoryId && LEGACY_CATEGORY_MAP[task.categoryId]);
+    const eventCategory = (event: CalendarEvent) => {
+      const legacy = event as CalendarEvent & { calendar?: string; category?: string };
+      return event.categoryId ?? legacy.calendar ?? legacy.category;
+    };
+    const taskCategory = (task: FlowTask) => {
+      const legacy = task as FlowTask & { calendar?: string; category?: string };
+      return task.categoryId ?? legacy.calendar ?? legacy.category;
+    };
+    const movedEvents = storedEvents.filter((event) => normalizeCategoryId(eventCategory(event)) !== eventCategory(event));
+    const movedTasks = storedTasks.filter((task) => normalizeCategoryId(taskCategory(task)) !== taskCategory(task));
     const retired = storedCategories.filter((category) => LEGACY_CATEGORY_MAP[category.id] && !category.deletedAt);
-    if (!movedEvents.length && !movedTasks.length && !retired.length) return;
-    const tx = db.transaction(["events", "tasks", "categories"], "readwrite");
+    const movedExceptions = storedExceptions.filter((exception) =>
+      exception.replacement && normalizeCategoryId(eventCategory(exception.replacement)) !== eventCategory(exception.replacement));
+    const movedMoments = storedMoments.filter((moment) =>
+      moment.calendarReminder?.calendarId && normalizeCategoryId(moment.calendarReminder.calendarId) !== moment.calendarReminder.calendarId);
+    if (!movedEvents.length && !movedTasks.length && !retired.length && !movedExceptions.length && !movedMoments.length) return;
+    const tx = db.transaction(["events", "tasks", "categories", "recurrenceExceptions", "growthMoments"], "readwrite");
     const eventStore = tx.objectStore("events");
     for (const event of movedEvents) {
-      eventStore.put({ ...event, categoryId: LEGACY_CATEGORY_MAP[event.categoryId], updatedAt: timestamp });
+      eventStore.put({ ...normalizeEventCategory(event), updatedAt: timestamp });
     }
     const taskStore = tx.objectStore("tasks");
     for (const task of movedTasks) {
-      taskStore.put({ ...task, categoryId: LEGACY_CATEGORY_MAP[task.categoryId!], updatedAt: timestamp });
+      taskStore.put({ ...normalizeTaskCategory(task), updatedAt: timestamp });
     }
     const categoryStore = tx.objectStore("categories");
     for (const category of retired) categoryStore.put({ ...category, deletedAt: timestamp, updatedAt: timestamp });
+    const exceptionStore = tx.objectStore("recurrenceExceptions");
+    for (const exception of movedExceptions) exceptionStore.put({
+      ...exception,
+      replacement: normalizeEventCategory(exception.replacement!),
+      updatedAt: timestamp,
+    });
+    const momentStore = tx.objectStore("growthMoments");
+    for (const moment of movedMoments) momentStore.put({
+      ...moment,
+      calendarReminder: {
+        ...moment.calendarReminder!,
+        calendarId: normalizeCategoryId(moment.calendarReminder!.calendarId),
+      },
+      updatedAt: timestamp,
+    });
     await transactionDone(tx);
   } finally {
     db.close();
@@ -291,7 +357,7 @@ export const normalizeFlowTask = (
   const createdAt = input.createdAt ?? fallbackTimestamp;
   const updatedAt = input.updatedAt ?? createdAt;
   const parsedCreatedAt = Date.parse(createdAt);
-  return {
+  return normalizeTaskCategory({
     ...input,
     id: input.id,
     title: input.title,
@@ -305,7 +371,7 @@ export const normalizeFlowTask = (
     createdAt,
     updatedAt,
     deviceId: input.deviceId ?? "legacy-device",
-  };
+  });
 };
 
 export const normalizeBackup = (backup: MonthlaneBackup): MonthlaneBackupV2 => {
@@ -341,17 +407,26 @@ export const normalizeBackup = (backup: MonthlaneBackup): MonthlaneBackupV2 => {
     schemaVersion: 2,
     exportedAt,
     updatedAt: version === 2 ? candidate.updatedAt ?? exportedAt : exportedAt,
-    events: candidate.events,
+    events: candidate.events.map(normalizeEventCategory),
     tasks: version === 2 && Array.isArray(candidate.tasks)
       ? candidate.tasks.map((task, index) => normalizeFlowTask(task, exportedAt, index))
       : [],
     readingItems: version === 2 && Array.isArray(candidate.readingItems) ? candidate.readingItems : [],
-    categories: candidate.categories,
-    exceptions: candidate.exceptions,
+    categories: normalizedBackupCategories(candidate.categories),
+    exceptions: candidate.exceptions.map((exception) => exception.replacement ? {
+      ...exception,
+      replacement: normalizeEventCategory(exception.replacement),
+    } : exception),
     settings: version === 2 && Array.isArray(candidate.settings) ? candidate.settings : [],
     learningTracks: Array.isArray(candidate.learningTracks) ? candidate.learningTracks : [],
     learningProgressLogs: Array.isArray(candidate.learningProgressLogs) ? candidate.learningProgressLogs : [],
-    growthMoments: Array.isArray(candidate.growthMoments) ? candidate.growthMoments : [],
+    growthMoments: Array.isArray(candidate.growthMoments) ? candidate.growthMoments.map((moment) => ({
+      ...moment,
+      calendarReminder: moment.calendarReminder ? {
+        ...moment.calendarReminder,
+        calendarId: normalizeCategoryId(moment.calendarReminder.calendarId),
+      } : undefined,
+    })) : [],
     syncMetadata: version === 2 ? candidate.syncMetadata : undefined,
   };
 };

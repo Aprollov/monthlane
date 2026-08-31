@@ -89,6 +89,36 @@ test("V1 backup normalization adds an empty tasks collection", () => {
   assert.deepEqual(normalized.tasks, []);
 });
 
+test("Personal records normalize to Life without copying or losing fields", () => {
+  const originalEvent = {
+    ...event("personal-event", "Dinner", "2026-07-29T12:00:00.000Z"),
+    notes: "Keep this note",
+    recurrence: { frequency: "yearly", interval: 1, endType: "never" },
+  };
+  const originalTask = flowTask("personal-task", "Plan dinner", "2026-07-30T09:00:00.000Z", {
+    categoryId: "Personal",
+    notes: "Keep task note",
+    completedAt: "2026-07-30T10:00:00.000Z",
+    showInMonthView: false,
+  });
+  const normalized = normalizeBackup({
+    ...backupV2([originalTask]),
+    events: [originalEvent],
+    categories: [{ id: "personal", name: "Personal", color: "#8A7894", isDefault: true, createdAt: originalEvent.createdAt, updatedAt: originalEvent.updatedAt, deviceId: "test" }],
+  });
+
+  assert.equal(normalized.events.length, 1);
+  assert.equal(normalized.events[0].categoryId, "life");
+  assert.equal(normalized.events[0].notes, originalEvent.notes);
+  assert.deepEqual(normalized.events[0].recurrence, originalEvent.recurrence);
+  assert.equal(normalized.tasks.length, 1);
+  assert.equal(normalized.tasks[0].categoryId, "life");
+  assert.equal(normalized.tasks[0].completedAt, originalTask.completedAt);
+  assert.equal(normalized.tasks[0].showInMonthView, false);
+  assert.equal(normalized.categories.some(({ id }) => id === "personal"), false);
+  assert.equal(normalized.categories.some(({ id }) => id === "life"), true);
+});
+
 test("schemaVersion-only legacy cloud payload remains compatible", () => {
   const normalized = normalizeBackup({
     schemaVersion: 1,

@@ -9,7 +9,7 @@ const event = (overrides = {}) => ({
   allDay: false,
   startTime: "10:00",
   endTime: "11:00",
-  categoryId: "personal",
+  categoryId: "life",
   recurrence: null,
   createdAt: "2026-07-01T00:00:00.000Z",
   updatedAt: "2026-07-01T00:00:00.000Z",

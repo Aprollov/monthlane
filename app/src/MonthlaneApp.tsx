@@ -108,6 +108,15 @@ export function MonthlaneApp() {
     return () => window.clearTimeout(timer);
   }, [refresh]);
   useEffect(() => {
+    if (hiddenCategories.has("personal") || hiddenCategories.has("Personal")) {
+      setHiddenCategories((current) => {
+        const next = new Set(current);
+        next.delete("personal");
+        next.delete("Personal");
+        return next;
+      });
+      return;
+    }
     localStorage.setItem("monthlane-hidden-calendars", JSON.stringify([...hiddenCategories]));
   }, [hiddenCategories]);
   useEffect(() => {

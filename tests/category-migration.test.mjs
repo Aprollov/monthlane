@@ -9,11 +9,10 @@ test("default calendars are long-term life areas with stable colors", () => {
   const byId = Object.fromEntries(defaultCategories.map((category) => [category.id, category]));
   assert.deepEqual(
     defaultCategories.map(({ id }) => id),
-    ["work", "life", "personal", "relationships", "finance", FALLBACK_CATEGORY_ID],
+    ["work", "life", "relationships", "finance", FALLBACK_CATEGORY_ID],
   );
   assert.equal(byId.work.color, "#6F8191");
   assert.equal(byId.life.color, "#758B75");
-  assert.equal(byId.personal.color, "#8A7894");
   assert.equal(byId.relationships.color, "#A16F72");
   assert.equal(byId.finance.color, "#A4835F");
 });
@@ -21,6 +20,8 @@ test("default calendars are long-term life areas with stable colors", () => {
 test("legacy folder calendars migrate into life areas", () => {
   assert.equal(LEGACY_CATEGORY_MAP.anniversaries, "relationships");
   assert.equal(LEGACY_CATEGORY_MAP.renewals, "finance");
+  assert.equal(LEGACY_CATEGORY_MAP.personal, "life");
+  assert.equal(LEGACY_CATEGORY_MAP.Personal, "life");
 });
 
 test("calendar item count includes events and active tasks only", () => {

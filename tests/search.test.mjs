@@ -5,7 +5,7 @@ import { searchEvents, searchTasks } from "../app/src/search.ts";
 
 const categories = [
   { id: "work", name: "Work" },
-  { id: "personal", name: "Personal" },
+  { id: "life", name: "Life" },
 ];
 const event = (id, title, notes, categoryId, startDate) => ({
   id,
@@ -21,7 +21,7 @@ const event = (id, title, notes, categoryId, startDate) => ({
   deviceId: "test",
 });
 const events = [
-  event("1", "Dentist", "Bring insurance card", "personal", "2026-08-10"),
+  event("1", "Dentist", "Bring insurance card", "life", "2026-08-10"),
   event("2", "Quarterly review", "Revenue planning", "work", "2026-09-02"),
   { ...event("3", "Old meeting", "", "work", "2026-07-01"), deletedAt: "2026-07-02" },
 ];

@@ -12,7 +12,7 @@ const event = (recurrence, startDate = "2026-01-31") => ({
   allDay: false,
   notes: "",
   color: "#5f6f52",
-  categoryId: "personal",
+  categoryId: "life",
   status: "active",
   createdAt: 1,
   updatedAt: 1,

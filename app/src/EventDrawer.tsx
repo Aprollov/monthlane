@@ -23,7 +23,7 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
   const titleInput = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<EventDraft>({
     title: "", startDate: date, allDay: true, startTime: "09:00", endTime: "10:00",
-    notes: "", categoryId: "personal", recurrence: undefined,
+    notes: "", categoryId: "life", recurrence: undefined,
   });
   const [error, setError] = useState("");
 
@@ -35,7 +35,7 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
       notes: event.notes, categoryId: event.categoryId, recurrence: event.recurrence,
     } : {
       title: "", startDate: date, allDay: true, startTime: "09:00", endTime: "10:00",
-      notes: "", categoryId: defaultCategoryId ?? "personal", recurrence: undefined,
+      notes: "", categoryId: defaultCategoryId ?? "life", recurrence: undefined,
     });
     setError("");
     window.setTimeout(() => titleInput.current?.focus(), 120);
