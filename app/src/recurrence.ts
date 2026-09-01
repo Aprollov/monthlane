@@ -1,6 +1,8 @@
 import { fromDateKey, toDateKey } from "./dates.ts";
 import type { CalendarEvent, FlowTask, RecurrenceException, RecurrenceRule } from "./types.ts";
 
+export type RecurrencePreset = "none" | "daily" | "workdays" | "weekly" | "monthly" | "yearly" | "custom";
+
 const DAY_MS = 86_400_000;
 
 const utcDay = (date: Date) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
@@ -14,6 +16,32 @@ const mondayOf = (date: Date) => {
   return result;
 };
 const lastDay = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+
+export const recurrencePreset = (rule?: RecurrenceRule): RecurrencePreset => {
+  if (!rule) return "none";
+  if (rule.interval !== 1) return "custom";
+  if (rule.frequency === "daily") return "daily";
+  if (rule.frequency === "weekly" && rule.daysOfWeek?.join(",") === "1,2,3,4,5") return "workdays";
+  if (rule.frequency === "weekly" && (rule.daysOfWeek?.length ?? 0) <= 1) return "weekly";
+  if (rule.frequency === "monthly") return "monthly";
+  if (rule.frequency === "yearly") return "yearly";
+  return "custom";
+};
+
+export const recurrenceRuleForPreset = (
+  preset: RecurrencePreset,
+  startDate: string,
+  current?: RecurrenceRule,
+): RecurrenceRule | undefined => {
+  if (preset === "none") return undefined;
+  if (preset === "custom") return current ?? { frequency: "daily", interval: 1, endType: "never" };
+  const startWeekday = weekday(fromDateKey(startDate));
+  if (preset === "daily") return { frequency: "daily", interval: 1, endType: "never" };
+  if (preset === "workdays") return { frequency: "weekly", interval: 1, daysOfWeek: [1, 2, 3, 4, 5], endType: "never" };
+  if (preset === "weekly") return { frequency: "weekly", interval: 1, daysOfWeek: [startWeekday], endType: "never" };
+  if (preset === "monthly") return { frequency: "monthly", interval: 1, endType: "never" };
+  return { frequency: "yearly", interval: 1, endType: "never" };
+};
 
 export const previousDateKey = (value: string) => {
   const date = fromDateKey(value);

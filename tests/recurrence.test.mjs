@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { expandEvents, occursOn, previousDateKey } from "../app/src/recurrence.ts";
+import { expandEvents, occursOn, previousDateKey, recurrencePreset, recurrenceRuleForPreset } from "../app/src/recurrence.ts";
 
 const event = (recurrence, startDate = "2026-01-31") => ({
   id: "series-1",
@@ -74,4 +74,13 @@ test("expanded series applies deleted and modified occurrence exceptions", () =>
 
 test("previousDateKey crosses month and year boundaries", () => {
   assert.equal(previousDateKey("2026-01-01"), "2025-12-31");
+});
+
+test("repeat presets and custom intervals share the recurrence data model", () => {
+  assert.deepEqual(recurrenceRuleForPreset("yearly", "2026-09-01"), {
+    frequency: "yearly", interval: 1, endType: "never",
+  });
+  const custom = { frequency: "monthly", interval: 6, endType: "never" };
+  assert.equal(recurrencePreset(custom), "custom");
+  assert.equal(recurrenceRuleForPreset("custom", "2026-09-01", custom), custom);
 });

@@ -2,8 +2,8 @@
 
 import { useCallback, useState } from "react";
 import { MoreHorizontal, X } from "../icons";
-import { recurrenceLabel } from "../recurrence";
-import type { Category, FlowTask, RecurrenceRule, TaskBucket, TaskPriority, TaskStatus, UpdateTaskInput } from "../types";
+import { recurrenceLabel, recurrencePreset, recurrenceRuleForPreset, type RecurrencePreset } from "../recurrence";
+import type { Category, FlowTask, RecurrenceFrequency, TaskBucket, TaskPriority, TaskStatus, UpdateTaskInput } from "../types";
 import { useDialogFocus } from "../useDialogFocus";
 import { flowBucket, isTaskDoneOn } from "./taskFilters";
 
@@ -34,23 +34,12 @@ const draftFromTask = (task: FlowTask): UpdateTaskInput => ({
   status: task.status,
 });
 
-const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-const repeatValue = (rule?: RecurrenceRule) => {
-  if (!rule) return "none";
-  if (rule.interval !== 1) return "custom";
-  if (rule.frequency === "daily") return "daily";
-  if (rule.frequency === "weekly" && rule.daysOfWeek?.join(",") === "1,2,3,4,5") return "weekdays";
-  if (rule.frequency === "weekly" && (rule.daysOfWeek?.length ?? 0) <= 1) return "weekly";
-  if (rule.frequency === "monthly") return "monthly";
-  return "custom";
-};
-
 export function TaskEditorDrawer({ task, categories, today, onClose, onSave, onDelete, onConvert, onToggleDone }: Props) {
   const [draft, setDraft] = useState<UpdateTaskInput>(() => draftFromTask(task));
   const [menuOpen, setMenuOpen] = useState(false);
   const [more, setMore] = useState(() => Boolean(task.dueDate || task.tags.length || task.estimatedMinutes || task.showInMonthView === false));
   const [busy, setBusy] = useState(false);
+  const [customRepeat, setCustomRepeat] = useState(() => recurrencePreset(task.recurrence) === "custom");
   // The editor keeps its own snapshot of the task, so reflect the latest
   // completion toggle locally instead of waiting for the prop to refresh.
   const doneDate = task.scheduledDate ?? today;
@@ -76,17 +65,17 @@ export function TaskEditorDrawer({ task, categories, today, onClose, onSave, onD
   }, [onClose]);
   const dialogRef = useDialogFocus<HTMLElement>(true, closeEditor);
 
-  const setRepeat = (value: string) => {
-    if (value === "none") { setDraft({ ...draft, recurrence: undefined }); return; }
+  const setRepeat = (value: RecurrencePreset) => {
     const startDate = draft.scheduledDate ?? today;
-    const weekday = ((new Date(`${startDate}T12:00:00`).getDay() + 6) % 7) + 1;
-    const rule: RecurrenceRule =
-      value === "daily" ? { frequency: "daily", interval: 1, endType: "never" }
-      : value === "weekdays" ? { frequency: "weekly", interval: 1, daysOfWeek: [1, 2, 3, 4, 5], endType: "never" }
-      : value === "monthly" ? { frequency: "monthly", interval: 1, endType: "never" }
-      : { frequency: "weekly", interval: 1, daysOfWeek: [weekday], endType: "never" };
-    setDraft({ ...draft, scheduledDate: startDate, recurrence: rule });
+    setCustomRepeat(value === "custom");
+    setDraft({
+      ...draft,
+      scheduledDate: value === "none" ? draft.scheduledDate : startDate,
+      recurrence: recurrenceRuleForPreset(value, startDate, draft.recurrence),
+    });
   };
+
+  const repeatValue = customRepeat ? "custom" : recurrencePreset(draft.recurrence);
 
   return (
     <>
@@ -137,14 +126,39 @@ export function TaskEditorDrawer({ task, categories, today, onClose, onSave, onD
             <label>Scheduled date<input type="date" value={draft.scheduledDate ?? ""} onChange={(event) => setDraft({ ...draft, scheduledDate: event.target.value || undefined })} /></label>
             <label>Time<input type="time" value={draft.scheduledTime ?? ""} onChange={(event) => setDraft({ ...draft, scheduledTime: event.target.value || undefined })} /></label>
           </div>
-          <label>Repeat<select value={repeatValue(draft.recurrence)} onChange={(event) => setRepeat(event.target.value)}>
+          <label>Repeat<select value={repeatValue} onChange={(event) => setRepeat(event.target.value as RecurrencePreset)}>
             <option value="none">Does not repeat</option>
             <option value="daily">Daily</option>
             <option value="weekdays">Every weekday</option>
-            <option value="weekly">Weekly on {WEEKDAY_LABELS[((new Date(`${draft.scheduledDate ?? today}T12:00:00`).getDay() + 6) % 7)]}</option>
+            <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
-            {repeatValue(draft.recurrence) === "custom" && <option value="custom">{recurrenceLabel(draft.recurrence)}</option>}
+            <option value="yearly">Yearly</option>
+            <option value="custom">Custom…</option>
           </select></label>
+          {draft.recurrence && repeatValue === "custom" && <div className="recurrencePanel taskRecurrencePanel">
+            <p>{recurrenceLabel(draft.recurrence)}</p>
+            <div className="formSplit">
+              <label>Repeat every<input type="number" min="1" max="99" value={draft.recurrence.interval} onChange={(event) => setDraft({
+                ...draft,
+                recurrence: { ...draft.recurrence!, interval: Math.max(1, Number(event.target.value)) },
+              })} /></label>
+              <label>Unit<select value={draft.recurrence.frequency} onChange={(event) => setDraft({
+                ...draft,
+                recurrence: {
+                  ...draft.recurrence!,
+                  frequency: event.target.value as RecurrenceFrequency,
+                  daysOfWeek: event.target.value === "weekly"
+                    ? (draft.recurrence?.daysOfWeek?.length ? draft.recurrence.daysOfWeek : [((new Date(`${draft.scheduledDate ?? today}T12:00:00`).getDay() + 6) % 7) + 1])
+                    : undefined,
+                },
+              })}>
+                <option value="daily">Day</option>
+                <option value="weekly">Week</option>
+                <option value="monthly">Month</option>
+                <option value="yearly">Year</option>
+              </select></label>
+            </div>
+          </div>}
           <div className="formSplit">
             <label>Calendar<select value={draft.categoryId ?? ""} onChange={(event) => setDraft({ ...draft, categoryId: event.target.value || undefined })}>
               <option value="">No calendar</option>

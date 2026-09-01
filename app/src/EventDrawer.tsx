@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { MoreHorizontal, X } from "./icons";
-import { recurrenceLabel } from "./recurrence";
+import { recurrenceLabel, recurrencePreset, recurrenceRuleForPreset, type RecurrencePreset } from "./recurrence";
 import type { CalendarEvent, Category, EventDraft, RecurrenceFrequency, RecurrenceRule } from "./types";
 
 type Props = {
@@ -26,6 +26,7 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
     notes: "", categoryId: "life", recurrence: undefined,
   });
   const [error, setError] = useState("");
+  const [customRepeat, setCustomRepeat] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -38,6 +39,7 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
       notes: "", categoryId: defaultCategoryId ?? "life", recurrence: undefined,
     });
     setError("");
+    setCustomRepeat(Boolean(event?.recurrence && recurrencePreset(event.recurrence) === "custom"));
     window.setTimeout(() => titleInput.current?.focus(), 120);
   }, [date, defaultCategoryId, event, open]);
 
@@ -50,32 +52,11 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
 
   if (!open) return null;
 
-  const recurrencePreset = (() => {
-    const rule = draft.recurrence;
-    if (!rule) return "none";
-    if (rule.frequency === "daily" && rule.interval === 1) return "daily";
-    if (rule.frequency === "weekly" && rule.interval === 1 && rule.daysOfWeek?.join(",") === "1,2,3,4,5") return "workdays";
-    if (rule.frequency === "weekly" && rule.interval === 1) return "weekly";
-    if (rule.frequency === "weekly" && rule.interval === 2) return "biweekly";
-    if (rule.frequency === "monthly" && rule.interval === 1) return "monthly";
-    if (rule.frequency === "yearly" && rule.interval === 1) return "yearly";
-    return "custom";
-  })();
+  const repeatPreset = customRepeat ? "custom" : recurrencePreset(draft.recurrence);
 
-  const setPreset = (preset: string) => {
-    const end = { endType: "never" as const };
-    const day = ((new Date(`${draft.startDate}T12:00:00`).getDay() + 6) % 7) + 1;
-    const presets: Record<string, RecurrenceRule | undefined> = {
-      none: undefined,
-      daily: { frequency: "daily", interval: 1, ...end },
-      workdays: { frequency: "weekly", interval: 1, daysOfWeek: [1, 2, 3, 4, 5], ...end },
-      weekly: { frequency: "weekly", interval: 1, daysOfWeek: [day], ...end },
-      biweekly: { frequency: "weekly", interval: 2, daysOfWeek: [day], ...end },
-      monthly: { frequency: "monthly", interval: 1, ...end },
-      yearly: { frequency: "yearly", interval: 1, ...end },
-      custom: draft.recurrence ?? { frequency: "weekly", interval: 1, daysOfWeek: [day], ...end },
-    };
-    setDraft({ ...draft, recurrence: presets[preset] });
+  const setPreset = (preset: RecurrencePreset) => {
+    setCustomRepeat(preset === "custom");
+    setDraft({ ...draft, recurrence: recurrenceRuleForPreset(preset, draft.startDate, draft.recurrence) });
   };
 
   const submit = async (submitEvent: React.FormEvent) => {
@@ -143,12 +124,11 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
           </label>
           <label>
             Repeat
-            <select value={recurrencePreset} onChange={(e) => setPreset(e.target.value)}>
+            <select value={repeatPreset} onChange={(e) => setPreset(e.target.value as RecurrencePreset)}>
               <option value="none">Does not repeat</option>
               <option value="daily">Daily</option>
               <option value="workdays">Every weekday</option>
               <option value="weekly">Weekly</option>
-              <option value="biweekly">Every two weeks</option>
               <option value="monthly">Monthly</option>
               <option value="yearly">Yearly</option>
               <option value="custom">Custom…</option>
@@ -157,26 +137,32 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
           {draft.recurrence && (
             <div className="recurrencePanel">
               <p>{recurrenceLabel(draft.recurrence)}</p>
-              {recurrencePreset === "custom" && (
+              {repeatPreset === "custom" && (
                 <>
                   <div className="formSplit">
                     <label>
-                      Every
+                      Repeat every
                       <input type="number" min="1" max="99" value={draft.recurrence.interval} onChange={(e) => setDraft({
                         ...draft,
                         recurrence: { ...draft.recurrence!, interval: Math.max(1, Number(e.target.value)) },
                       })} />
                     </label>
                     <label>
-                      Period
+                      Unit
                       <select value={draft.recurrence.frequency} onChange={(e) => setDraft({
                         ...draft,
-                        recurrence: { ...draft.recurrence!, frequency: e.target.value as RecurrenceFrequency },
+                        recurrence: {
+                          ...draft.recurrence!,
+                          frequency: e.target.value as RecurrenceFrequency,
+                          daysOfWeek: e.target.value === "weekly"
+                            ? (draft.recurrence?.daysOfWeek?.length ? draft.recurrence.daysOfWeek : [((new Date(`${draft.startDate}T12:00:00`).getDay() + 6) % 7) + 1])
+                            : undefined,
+                        },
                       })}>
-                        <option value="daily">Day(s)</option>
-                        <option value="weekly">Week(s)</option>
-                        <option value="monthly">Month(s)</option>
-                        <option value="yearly">Year(s)</option>
+                        <option value="daily">Day</option>
+                        <option value="weekly">Week</option>
+                        <option value="monthly">Month</option>
+                        <option value="yearly">Year</option>
                       </select>
                     </label>
                   </div>
