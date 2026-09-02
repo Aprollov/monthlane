@@ -124,7 +124,10 @@ export function TaskEditorDrawer({ task, categories, today, onClose, onSave, onD
           </div>
           <div className="formSplit">
             <label>Scheduled date<input type="date" value={draft.scheduledDate ?? ""} onChange={(event) => setDraft({ ...draft, scheduledDate: event.target.value || undefined })} /></label>
-            <label>Time<input type="time" value={draft.scheduledTime ?? ""} onChange={(event) => setDraft({ ...draft, scheduledTime: event.target.value || undefined })} /></label>
+            <label>Time<div className="optionalTimeField">
+              <input type="time" value={draft.scheduledTime ?? ""} placeholder="No time" onChange={(event) => setDraft({ ...draft, scheduledTime: event.target.value || null })} />
+              {!draft.scheduledTime && <span className="timePlaceholder" aria-hidden="true">No time</span>}
+            </div></label>
           </div>
           <label>Repeat<select value={repeatValue} onChange={(event) => setRepeat(event.target.value as RecurrencePreset)}>
             <option value="none">Does not repeat</option>

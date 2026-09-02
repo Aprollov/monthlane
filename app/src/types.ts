@@ -104,7 +104,7 @@ export type FlowTask = {
   status: TaskStatus;
   bucket: TaskBucket;
   scheduledDate?: string;
-  scheduledTime?: string;
+  scheduledTime?: string | null;
   estimatedMinutes?: number;
   dueDate?: string;
   categoryId?: string;

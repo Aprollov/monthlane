@@ -15,7 +15,7 @@ export const taskToEvent = (task: FlowTask, fallbackDate: string): CalendarEvent
   title: task.title,
   startDate: task.scheduledDate ?? fallbackDate,
   allDay: !task.scheduledTime,
-  startTime: task.scheduledTime,
+  startTime: task.scheduledTime ?? undefined,
   endTime: undefined,
   notes: task.notes ?? "",
   categoryId: task.categoryId ?? "other",

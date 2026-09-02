@@ -188,6 +188,10 @@ strong > .priorityMark { font-size: 9px; }
 .checkRow { grid-template-columns: 18px 1fr !important; align-items: center; font-size: 13px !important; font-weight: 500 !important; }
 .checkRow input { width: 16px; height: 16px; accent-color: var(--accent); }
 .formSplit { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.optionalTimeField { position: relative; }
+.optionalTimeField input { width: 100%; }
+.timePlaceholder { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); background: var(--surface); color: var(--text-muted); padding-right: 5px; font-size: 13px; font-weight: 400; pointer-events: none; }
+.optionalTimeField:focus-within .timePlaceholder { display: none; }
 .fieldError { margin: -13px 0 0; color: var(--danger); font-size: 12px; }
 .recurrencePanel { display: grid; gap: 14px; padding: 15px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-secondary); }
 .recurrencePanel > p { margin: 0; color: var(--accent); font-size: 12px; font-weight: 700; }

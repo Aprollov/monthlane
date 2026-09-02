@@ -86,6 +86,14 @@ test("scheduling a task does not change its Flow bucket", async () => {
   assert.equal(scheduled.scheduledDate, "2026-08-08");
 });
 
+test("clearing an existing task time persists an explicit no-time value", async () => {
+  const { repository } = createHarness();
+  const original = await repository.createTask({ title: "Flexible task", scheduledTime: "09:30" });
+  const updated = await repository.updateTask(original.id, { scheduledTime: null });
+  assert.equal(updated.scheduledTime, null);
+  assert.match(JSON.stringify(updated), /"scheduledTime":null/);
+});
+
 test("completes and reopens a task without changing its bucket or schedule", async () => {
   const { repository } = createHarness();
   const original = await repository.createTask({
