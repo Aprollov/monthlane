@@ -36,6 +36,8 @@ const dateAtPoint = (clientX: number, clientY: number) =>
     ?.closest<HTMLElement>("[data-date-key]")
     ?.dataset.dateKey;
 
+const clearBrowserSelection = () => window.getSelection()?.removeAllRanges();
+
 export function useCalendarDrag({ onDrop, onRecurringBlocked }: Options) {
   const [active, setActive] = useState<ActiveDrag>();
   const activeRef = useRef<ActiveDrag | undefined>(undefined);
@@ -61,6 +63,7 @@ export function useCalendarDrag({ onDrop, onRecurringBlocked }: Options) {
       onRecurringBlocked();
       return;
     }
+    clearBrowserSelection();
     try { pending.source.setPointerCapture(pending.pointerId); } catch {}
     if (navigator.vibrate && pending.pointerType === "touch") navigator.vibrate(12);
     const next = {
@@ -78,6 +81,7 @@ export function useCalendarDrag({ onDrop, onRecurringBlocked }: Options) {
       if (drag) {
         if (event.pointerId !== pendingRef.current?.pointerId) return;
         event.preventDefault();
+        clearBrowserSelection();
         updateActive({
           ...drag,
           clientX: event.clientX,
@@ -116,6 +120,20 @@ export function useCalendarDrag({ onDrop, onRecurringBlocked }: Options) {
       updateActive(undefined);
     };
 
+    const cancelInterruptedDrag = () => {
+      clearPending();
+      updateActive(undefined);
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") cancelInterruptedDrag();
+    };
+
+    const onLostPointerCapture = (event: PointerEvent) => {
+      if (event.pointerId !== pendingRef.current?.pointerId) return;
+      cancelInterruptedDrag();
+    };
+
     // Browsers may start a native HTML5 drag from the dragged row or its SVG
     // icon; once that happens pointermove events stop firing and the pointer
     // based drag never activates, so suppress native dragging on drag sources.
@@ -129,11 +147,17 @@ export function useCalendarDrag({ onDrop, onRecurringBlocked }: Options) {
     window.addEventListener("pointermove", onPointerMove, { passive: false });
     window.addEventListener("pointerup", finish, { passive: false });
     window.addEventListener("pointercancel", cancel);
+    window.addEventListener("lostpointercapture", onLostPointerCapture);
+    window.addEventListener("blur", cancelInterruptedDrag);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("dragstart", onNativeDragStart);
     return () => {
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", finish);
       window.removeEventListener("pointercancel", cancel);
+      window.removeEventListener("lostpointercapture", onLostPointerCapture);
+      window.removeEventListener("blur", cancelInterruptedDrag);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("dragstart", onNativeDragStart);
       clearPending();
       document.body.classList.remove("calendarDragging");
@@ -146,6 +170,7 @@ export function useCalendarDrag({ onDrop, onRecurringBlocked }: Options) {
   ) => {
     if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
     clearPending();
+    clearBrowserSelection();
     const pending: PendingDrag = {
       item,
       pointerId: event.pointerId,

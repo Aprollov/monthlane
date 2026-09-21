@@ -117,9 +117,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .calendarTaskItem.completed .calendarTaskCheck { border-color: var(--accent); background: var(--accent); }
 .calendarTaskItem .eventTitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .calendarTaskItem time { margin-left: auto; color: var(--text-muted); font-size: 9px; }
-.eventItem, .calendarTaskItem, .mobileEventRow { touch-action: pan-y; }
+.eventItem, .calendarTaskItem, .mobileEventRow { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .calendarDragSource { opacity: .34 !important; }
-.calendarDragging { user-select: none; cursor: grabbing; }
+.calendarDragging, .calendarDragging * { user-select: none !important; -webkit-user-select: none !important; }
+.calendarDragging { cursor: grabbing; }
 .calendarDragging .eventItem, .calendarDragging .calendarTaskItem, .calendarDragging .mobileEventRow { cursor: grabbing; }
 .calendarDragPreview { position: fixed; top: 0; left: 0; z-index: 120; max-width: min(260px, calc(100vw - 30px)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; border: 1px solid #b8c8ba; border-radius: 7px; background: rgb(253 253 251 / 94%); color: var(--text-primary); padding: 8px 11px; font-size: 11px; box-shadow: 0 8px 22px rgb(45 55 46 / 15%); animation: toastIn 120ms ease-out; }
 .priorityBar { align-self: stretch; width: 3px; border-radius: 4px 0 0 4px; flex: 0 0 auto; }
