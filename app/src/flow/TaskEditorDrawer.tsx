@@ -45,24 +45,29 @@ export function TaskEditorDrawer({ task, categories, today, onClose, onSave, onD
   const doneDate = task.scheduledDate ?? today;
   const [doneOverride, setDoneOverride] = useState<boolean>();
   const isDone = doneOverride ?? isTaskDoneOn(task, doneDate);
-  const toggleDone = async () => {
-    if (!onToggleDone || busy) return;
-    setBusy(true);
-    try {
-      await onToggleDone(task, !isDone);
-      setDoneOverride(!isDone);
-      // Keep the Status dropdown in sync so a later save does not restore the old status.
-      if (!task.recurrence) setDraft((current) => ({ ...current, status: isDone ? "open" : "completed" }));
-    } finally {
-      setBusy(false);
-    }
-  };
   const closeEditor = useCallback(() => {
     setBusy(false);
     setMore(false);
     setDraft({});
     onClose();
   }, [onClose]);
+  const toggleDone = async () => {
+    if (!onToggleDone || busy) return;
+    const nextDone = !isDone;
+    setBusy(true);
+    try {
+      await onToggleDone(task, nextDone);
+      if (nextDone) {
+        closeEditor();
+        return;
+      }
+      setDoneOverride(nextDone);
+      // Keep the Status dropdown in sync so a later save does not restore the old status.
+      if (!task.recurrence) setDraft((current) => ({ ...current, status: "open" }));
+    } finally {
+      setBusy(false);
+    }
+  };
   const dialogRef = useDialogFocus<HTMLElement>(true, closeEditor);
 
   const setRepeat = (value: RecurrencePreset) => {
