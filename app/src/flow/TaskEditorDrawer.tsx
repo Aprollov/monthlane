@@ -11,11 +11,12 @@ type Props = {
   task: FlowTask;
   categories: Category[];
   today: string;
+  occurrenceDate?: string;
   onClose: () => void;
   onSave: (id: string, changes: UpdateTaskInput) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onConvert?: () => void;
-  onToggleDone?: (task: FlowTask, nextDone: boolean) => Promise<void>;
+  onToggleDone?: (task: FlowTask, occurrenceDate: string, nextDone: boolean) => Promise<void>;
 };
 
 const draftFromTask = (task: FlowTask): UpdateTaskInput => ({
@@ -34,7 +35,7 @@ const draftFromTask = (task: FlowTask): UpdateTaskInput => ({
   status: task.status,
 });
 
-export function TaskEditorDrawer({ task, categories, today, onClose, onSave, onDelete, onConvert, onToggleDone }: Props) {
+export function TaskEditorDrawer({ task, categories, today, occurrenceDate, onClose, onSave, onDelete, onConvert, onToggleDone }: Props) {
   const [draft, setDraft] = useState<UpdateTaskInput>(() => draftFromTask(task));
   const [menuOpen, setMenuOpen] = useState(false);
   const [more, setMore] = useState(() => Boolean(task.dueDate || task.tags.length || task.estimatedMinutes || task.showInMonthView === false));
@@ -42,7 +43,7 @@ export function TaskEditorDrawer({ task, categories, today, onClose, onSave, onD
   const [customRepeat, setCustomRepeat] = useState(() => recurrencePreset(task.recurrence) === "custom");
   // The editor keeps its own snapshot of the task, so reflect the latest
   // completion toggle locally instead of waiting for the prop to refresh.
-  const doneDate = task.scheduledDate ?? today;
+  const doneDate = occurrenceDate ?? task.scheduledDate ?? today;
   const [doneOverride, setDoneOverride] = useState<boolean>();
   const isDone = doneOverride ?? isTaskDoneOn(task, doneDate);
   const closeEditor = useCallback(() => {
@@ -56,7 +57,7 @@ export function TaskEditorDrawer({ task, categories, today, onClose, onSave, onD
     const nextDone = !isDone;
     setBusy(true);
     try {
-      await onToggleDone(task, nextDone);
+      await onToggleDone(task, doneDate, nextDone);
       if (nextDone) {
         closeEditor();
         return;

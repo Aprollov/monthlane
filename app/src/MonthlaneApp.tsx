@@ -68,6 +68,7 @@ export function MonthlaneApp() {
   const [clipboardLink, setClipboardLink] = useState<ClipboardLink>();
   const [captureDefaults, setCaptureDefaults] = useState<Omit<CreateTaskInput, "title">>({ bucket: "inbox" });
   const [editingTask, setEditingTask] = useState<FlowTask>();
+  const [editingTaskDate, setEditingTaskDate] = useState<string>();
   const [editingEvent, setEditingEvent] = useState<CalendarEvent>();
   const [scopeRequest, setScopeRequest] = useState<{ action: "edit" | "delete"; draft?: EventDraft }>();
   const [toast, setToast] = useState<{ message: string; actionLabel?: string; onAction?: () => void }>();
@@ -154,6 +155,16 @@ export function MonthlaneApp() {
     setCaptureOpen(true);
   }, []);
 
+  const openTaskEditor = useCallback((task: FlowTask, occurrenceDate?: string) => {
+    setEditingTask(task);
+    setEditingTaskDate(occurrenceDate ?? task.scheduledDate);
+  }, []);
+
+  const closeTaskEditor = useCallback(() => {
+    setEditingTask(undefined);
+    setEditingTaskDate(undefined);
+  }, []);
+
   const openReadLaterCapture = useCallback(async () => {
     let clipText = "";
     try {
@@ -174,7 +185,7 @@ export function MonthlaneApp() {
         setDrawerOpen(false);
         setCaptureOpen(false);
         setDayPanelOpen(false);
-        setEditingTask(undefined);
+        closeTaskEditor();
         setCalendarsOpen(false);
         setReadLaterOpen(false);
         return;
@@ -196,7 +207,7 @@ export function MonthlaneApp() {
     };
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, [goToToday, openCapture, openCreate, focusCategoryId]);
+  }, [closeTaskEditor, goToToday, openCapture, openCreate, focusCategoryId]);
 
   const days = useMemo(() => buildMonthGrid(visibleMonth), [visibleMonth]);
   const expandedEvents = useMemo(
@@ -828,7 +839,7 @@ export function MonthlaneApp() {
                             return;
                           }
                           clickEvent.stopPropagation();
-                          setEditingTask(entry.task);
+                          openTaskEditor(entry.task, entry.date);
                         }}>
                           <span className="priorityBar" style={{ background: priorityColor(entry.task.priority) }} />
                           {entry.task.scheduledTime && <time>{entry.task.scheduledTime}</time>}
@@ -889,7 +900,7 @@ export function MonthlaneApp() {
                     event.preventDefault();
                     return;
                   }
-                  setEditingTask(entry.task);
+                  openTaskEditor(entry.task, entry.date);
                 }}>
                 <TaskCheckbox
                   checked={isTaskDoneOn(entry.task, entry.date ?? entry.task.scheduledDate ?? todayKey)}
@@ -911,7 +922,7 @@ export function MonthlaneApp() {
             onAddEvent={() => openCreate(selectedDate)}
             onAddTask={() => openCapture({ bucket: flowBucketForScheduledDate(selectedDate, todayKey), scheduledDate: selectedDate, categoryId: focusCategoryId })}
             onOpenEvent={selectEvent}
-            onOpenTask={setEditingTask}
+            onOpenTask={(task) => openTaskEditor(task, selectedDate)}
             onCompleteTask={(task) => void toggleTaskDone(task, selectedDate)}
             onReopenTask={(task) => void toggleTaskDone(task, selectedDate)}
             onReturnToInbox={(task) => void moveTask(task, "inbox")}
@@ -934,7 +945,7 @@ export function MonthlaneApp() {
           mobileBucket={mobileFlowBucket}
           onMobileBucketChange={setMobileFlowBucket}
           onCreate={(input) => createTask(input.categoryId ? input : { ...input, categoryId: focusCategoryId })}
-          onEdit={setEditingTask}
+          onEdit={(task) => openTaskEditor(task, task.recurrence ? todayKey : task.scheduledDate)}
           onComplete={(task) => void toggleTaskDone(task, todayKey)}
           onReopen={(task) => void toggleTaskDone(task, todayKey)}
           onArchive={async (task) => { await taskRepository.archiveTask(task.id); await refresh(); notify("Task archived."); }}
@@ -983,24 +994,24 @@ export function MonthlaneApp() {
           setActiveView("flow");
         }
         setSearchOpen(false);
-        setEditingTask(task);
+        openTaskEditor(task, task.scheduledDate);
       }} />
       <QuickCapture open={captureOpen} defaults={captureDefaults} categories={categories} onClose={() => setCaptureOpen(false)} onCreate={createTask} onCreateReading={createReadingItem} />
       <ReadLaterCapture open={readLaterOpen} link={clipboardLink} onClose={() => setReadLaterOpen(false)} onSave={createReadingItem} />
       {editingTask && <TaskEditorDrawer
-        key={editingTask.id}
+        key={`${editingTask.id}:${editingTaskDate ?? ""}`}
         task={editingTask}
         categories={categories}
         today={todayKey}
-        onClose={() => setEditingTask(undefined)}
+        occurrenceDate={editingTaskDate}
+        onClose={closeTaskEditor}
         onSave={saveTask}
-        onConvert={editingTask && editingTask.kind !== "readLater" ? () => { const target = editingTask; setEditingTask(undefined); void convertTaskToEvent(target); } : undefined}
-        onToggleDone={async (target, nextDone) => {
+        onConvert={editingTask && editingTask.kind !== "readLater" ? () => { const target = editingTask; closeTaskEditor(); void convertTaskToEvent(target); } : undefined}
+        onToggleDone={async (target, occurrenceDate, nextDone) => {
           if (target.recurrence) {
-            const date = target.scheduledDate ?? todayKey;
             const completedDates = nextDone
-              ? [...new Set([...(target.completedDates ?? []), date])].sort()
-              : (target.completedDates ?? []).filter((day) => day !== date);
+              ? [...new Set([...(target.completedDates ?? []), occurrenceDate])].sort()
+              : (target.completedDates ?? []).filter((day) => day !== occurrenceDate);
             await taskRepository.updateTask(target.id, { completedDates });
           } else if (nextDone) {
             await taskRepository.setDone(target.id);
