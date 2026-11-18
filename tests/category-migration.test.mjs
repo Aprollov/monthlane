@@ -9,10 +9,11 @@ test("default calendars are long-term life areas with stable colors", () => {
   const byId = Object.fromEntries(defaultCategories.map((category) => [category.id, category]));
   assert.deepEqual(
     defaultCategories.map(({ id }) => id),
-    ["work", "life", "relationships", "finance", FALLBACK_CATEGORY_ID],
+    ["work", "life", "learning", "relationships", "finance", FALLBACK_CATEGORY_ID],
   );
   assert.equal(byId.work.color, "#6F8191");
   assert.equal(byId.life.color, "#758B75");
+  assert.equal(byId.learning.color, "#837D9B");
   assert.equal(byId.relationships.color, "#A16F72");
   assert.equal(byId.finance.color, "#A4835F");
 });
