@@ -1,5 +1,5 @@
 import { nextDateKey } from "../dates.ts";
-import { taskOccursOn } from "../recurrence.ts";
+import { recurrencePreset, taskOccursOn } from "../recurrence.ts";
 import { isTaskDoneOn } from "./taskFilters.ts";
 import type { CalendarEvent, FlowTask, TaskPriority } from "../types.ts";
 
@@ -76,12 +76,17 @@ export const groupCalendarEntries = (
 };
 
 
-/** Month-grid view of the entries: done task occurrences stay out of the grid but remain in day details. */
-export const activeGridEntries = (entriesByDate: Map<string, CalendarEntry[]>) => {
+/**
+ * Month-grid view of the entries: done task occurrences stay out of the grid but remain in day details.
+ * Every-weekday series stay quiet until their occurrence is actually today.
+ */
+export const activeGridEntries = (entriesByDate: Map<string, CalendarEntry[]>, today: string) => {
   const result = new Map<string, CalendarEntry[]>();
   for (const [date, entries] of entriesByDate) {
     const visible = entries.filter((entry) => entry.type === "event" || (
-      shouldShowTaskInMonthView(entry.task) && !isTaskDoneOn(entry.task, date)
+      shouldShowTaskInMonthView(entry.task) &&
+      !isTaskDoneOn(entry.task, date) &&
+      (recurrencePreset(entry.task.recurrence) !== "workdays" || date === today)
     ));
     if (visible.length) result.set(date, visible);
   }

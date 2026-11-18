@@ -13,14 +13,14 @@ const event = { id: "e1", title: "Meeting", startDate: "2026-08-10" };
 
 test("month grid hides completed one-off tasks but keeps open tasks and events", () => {
   const entries = groupCalendarEntries([event], [oneOffDone, oneOffOpen], "2026-08-09", "2026-08-12");
-  const grid = activeGridEntries(entries);
+  const grid = activeGridEntries(entries, "2026-08-10");
   const day = grid.get("2026-08-10");
   assert.deepEqual(day.map((entry) => entry.id), ["event:e1", "task:t2"]);
 });
 
 test("recurring task keeps future occurrences in the grid after a day is completed", () => {
   const entries = groupCalendarEntries([], [repeatDoneToday], "2026-08-10", "2026-08-13");
-  const grid = activeGridEntries(entries);
+  const grid = activeGridEntries(entries, "2026-08-10");
   assert.equal(grid.get("2026-08-10")?.[0]?.id, "task:rep::2026-08-10");
   assert.equal(grid.get("2026-08-11"), undefined);
   assert.equal(grid.get("2026-08-12")?.[0]?.id, "task:rep::2026-08-12");
@@ -32,14 +32,27 @@ test("Month View hides only tasks explicitly opted out while day details retain 
   assert.equal(shouldShowTaskInMonthView(hidden), false);
   const details = groupCalendarEntries([], [hidden]);
   assert.equal(details.get("2026-08-10")?.some((entry) => entry.id === "task:quiet"), true);
-  assert.equal(activeGridEntries(details).get("2026-08-10"), undefined);
+  assert.equal(activeGridEntries(details, "2026-08-10").get("2026-08-10"), undefined);
 });
 
 test("hidden recurring series creates day-detail occurrences but no Month View rows", () => {
   const hiddenRecurring = { ...repeatDoneToday, id: "quiet-repeat", completedDates: [], showInMonthView: false };
   const details = groupCalendarEntries([], [hiddenRecurring], "2026-08-10", "2026-08-13");
   assert.equal(details.get("2026-08-12")?.[0]?.id, "task:quiet-repeat::2026-08-12");
-  assert.equal(activeGridEntries(details).size, 0);
+  assert.equal(activeGridEntries(details, "2026-08-10").size, 0);
+});
+
+test("Every weekday stays out of Month View until today's occurrence", () => {
+  const weekdayTask = {
+    id: "weekday", title: "Duolingo", status: "open", scheduledDate: "2026-08-10",
+    recurrence: { frequency: "weekly", interval: 1, daysOfWeek: [1, 2, 3, 4, 5], endType: "never" },
+  };
+  const details = groupCalendarEntries([], [weekdayTask], "2026-08-10", "2026-08-14");
+  const grid = activeGridEntries(details, "2026-08-12");
+
+  assert.equal(details.get("2026-08-13")?.[0]?.id, "task:weekday::2026-08-13");
+  assert.deepEqual([...grid.keys()], ["2026-08-12"]);
+  assert.equal(grid.get("2026-08-12")?.[0]?.id, "task:weekday::2026-08-12");
 });
 
 test("day details still list completed tasks for history", () => {

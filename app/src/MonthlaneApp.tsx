@@ -232,7 +232,10 @@ export function MonthlaneApp() {
     () => groupCalendarEntries(visibleEvents, visibleScheduledTasks, toDateKey(days[0]), toDateKey(days[days.length - 1])),
     [days, visibleEvents, visibleScheduledTasks],
   );
-  const gridEntriesByDate = useMemo(() => activeGridEntries(entriesByDate), [entriesByDate]);
+  const gridEntriesByDate = useMemo(
+    () => activeGridEntries(entriesByDate, toDateKey(today)),
+    [entriesByDate, today],
+  );
   const searchableEvents = useMemo(
     () => [
       ...events,
