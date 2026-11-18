@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { MoreHorizontal, X } from "./icons";
-import { recurrenceLabel, recurrencePreset, recurrenceRuleForPreset, type RecurrencePreset } from "./recurrence";
+import { recurrenceLabel, recurrencePreset, recurrencePresetOptions, recurrenceRuleForPreset, type RecurrencePreset } from "./recurrence";
 import type { CalendarEvent, Category, EventDraft, RecurrenceFrequency, RecurrenceRule } from "./types";
 
 type Props = {
@@ -125,13 +125,7 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
           <label>
             Repeat
             <select value={repeatPreset} onChange={(e) => setPreset(e.target.value as RecurrencePreset)}>
-              <option value="none">Does not repeat</option>
-              <option value="daily">Daily</option>
-              <option value="workdays">Every weekday</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-              <option value="yearly">Yearly</option>
-              <option value="custom">Custom…</option>
+              {recurrencePresetOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </label>
           {draft.recurrence && (

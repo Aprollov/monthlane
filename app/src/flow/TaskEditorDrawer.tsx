@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { MoreHorizontal, X } from "../icons";
-import { recurrenceLabel, recurrencePreset, recurrenceRuleForPreset, type RecurrencePreset } from "../recurrence";
+import { recurrenceLabel, recurrencePreset, recurrencePresetOptions, recurrenceRuleForPreset, type RecurrencePreset } from "../recurrence";
 import type { Category, FlowTask, RecurrenceFrequency, TaskBucket, TaskPriority, TaskStatus, UpdateTaskInput } from "../types";
 import { useDialogFocus } from "../useDialogFocus";
 import { flowBucket, isTaskDoneOn } from "./taskFilters";
@@ -139,13 +139,7 @@ export function TaskEditorDrawer({ task, categories, today, occurrenceDate, onCl
             </div>
           </div>
           <label>Repeat<select value={repeatValue} onChange={(event) => setRepeat(event.target.value as RecurrencePreset)}>
-            <option value="none">Does not repeat</option>
-            <option value="daily">Daily</option>
-            <option value="weekdays">Every weekday</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="yearly">Yearly</option>
-            <option value="custom">Custom…</option>
+            {recurrencePresetOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select></label>
           {draft.recurrence && repeatValue === "custom" && <div className="recurrencePanel taskRecurrencePanel">
             <p>{recurrenceLabel(draft.recurrence)}</p>

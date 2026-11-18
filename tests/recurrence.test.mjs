@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { expandEvents, occursOn, previousDateKey, recurrencePreset, recurrenceRuleForPreset } from "../app/src/recurrence.ts";
+import { expandEvents, occursOn, previousDateKey, recurrencePreset, recurrencePresetOptions, recurrenceRuleForPreset } from "../app/src/recurrence.ts";
 
 const event = (recurrence, startDate = "2026-01-31") => ({
   id: "series-1",
@@ -77,9 +77,25 @@ test("previousDateKey crosses month and year boundaries", () => {
 });
 
 test("repeat presets and custom intervals share the recurrence data model", () => {
-  assert.deepEqual(recurrenceRuleForPreset("yearly", "2026-09-01"), {
-    frequency: "yearly", interval: 1, endType: "never",
-  });
+  const cases = [
+    ["none", undefined],
+    ["daily", { frequency: "daily", interval: 1, endType: "never" }],
+    ["workdays", { frequency: "weekly", interval: 1, daysOfWeek: [1, 2, 3, 4, 5], endType: "never" }],
+    ["weekly", { frequency: "weekly", interval: 1, daysOfWeek: [3], endType: "never" }],
+    ["monthly", { frequency: "monthly", interval: 1, endType: "never" }],
+    ["yearly", { frequency: "yearly", interval: 1, endType: "never" }],
+  ];
+  assert.deepEqual(recurrencePresetOptions.map(({ value }) => value), [
+    "none", "daily", "workdays", "weekly", "monthly", "yearly", "custom",
+  ]);
+  for (const [preset, expected] of cases) {
+    const rule = recurrenceRuleForPreset(preset, "2026-11-18");
+    assert.deepEqual(rule, expected);
+    assert.equal(recurrencePreset(rule), preset);
+  }
+  const weekdays = event(recurrenceRuleForPreset("workdays", "2026-11-18"), "2026-11-18");
+  assert.equal(occursOn(weekdays, "2026-11-20"), true);
+  assert.equal(occursOn(weekdays, "2026-11-21"), false);
   const custom = { frequency: "monthly", interval: 6, endType: "never" };
   assert.equal(recurrencePreset(custom), "custom");
   assert.equal(recurrenceRuleForPreset("custom", "2026-09-01", custom), custom);

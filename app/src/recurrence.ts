@@ -3,6 +3,16 @@ import type { CalendarEvent, FlowTask, RecurrenceException, RecurrenceRule } fro
 
 export type RecurrencePreset = "none" | "daily" | "workdays" | "weekly" | "monthly" | "yearly" | "custom";
 
+export const recurrencePresetOptions: ReadonlyArray<{ value: RecurrencePreset; label: string }> = [
+  { value: "none", label: "Does not repeat" },
+  { value: "daily", label: "Daily" },
+  { value: "workdays", label: "Every weekday" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "yearly", label: "Yearly" },
+  { value: "custom", label: "Custom…" },
+];
+
 const DAY_MS = 86_400_000;
 
 const utcDay = (date: Date) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
