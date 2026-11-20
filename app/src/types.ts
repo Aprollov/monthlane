@@ -9,6 +9,10 @@ export type RecurrenceRule = {
   count?: number;
 };
 
+export type EventReminder =
+  | { id: string; kind: "relative"; minutesBefore: number }
+  | { id: string; kind: "absolute"; date: string; time: string };
+
 export type CalendarEvent = {
   id: string;
   title: string;
@@ -20,7 +24,10 @@ export type CalendarEvent = {
   notes: string;
   categoryId: string;
   tags: string[];
+  /** Legacy relative reminders; retained for old backups and clients. */
   reminderMinutes: number[];
+  /** Structured reminders used by the iPhone Shortcuts integration. */
+  reminders?: EventReminder[];
   recurrence?: RecurrenceRule;
   recurrenceParentId?: string;
   recurrenceInstanceDate?: string;
@@ -56,7 +63,7 @@ export type Category = {
 
 export type EventDraft = Pick<
   CalendarEvent,
-  "title" | "startDate" | "allDay" | "startTime" | "endTime" | "notes" | "categoryId" | "recurrence"
+  "title" | "startDate" | "allDay" | "startTime" | "endTime" | "notes" | "categoryId" | "recurrence" | "reminders"
 >;
 
 export type MonthlaneBackupV1 = {

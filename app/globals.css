@@ -206,6 +206,22 @@ strong > .priorityMark { font-size: 9px; }
 .weekdayPicker input { position: absolute; opacity: 0; pointer-events: none; }
 .weekdayPicker span { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--border-strong); border-radius: 50%; background: var(--surface); color: var(--text-secondary); cursor: pointer; font-size: 11px; }
 .weekdayPicker input:checked + span { background: var(--accent); color: white; border-color: var(--accent); }
+.eventReminderSection { display: grid; gap: 12px; padding: 15px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-secondary); }
+.eventReminderHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.eventReminderHeading h3 { margin: 0 0 4px; color: var(--text-primary); font-family: Georgia, "Times New Roman", serif; font-size: 16px; font-weight: 500; }
+.eventReminderHeading p, .eventReminderEmpty, .shortcutWarning, .shortcutStatus { margin: 0; color: var(--text-muted); font-size: 11px; line-height: 1.5; }
+.compactButton { min-height: 34px; padding: 7px 10px; white-space: nowrap; }
+.eventReminderRow { display: grid; gap: 11px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.eventReminderRowHead { display: grid; grid-template-columns: minmax(0, 1fr) 32px; gap: 8px; align-items: center; }
+.eventReminderRowHead select { min-width: 0; }
+.reminderRemoveButton { width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer; }
+.reminderRemoveButton:hover { background: var(--surface-hover); color: var(--danger); }
+.reminderRemoveButton svg { width: 16px; }
+.shortcutActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.shortcutActions button { min-height: 40px; }
+.shortcutActions button:disabled { opacity: .45; cursor: not-allowed; }
+.shortcutStatus { color: var(--accent); font-weight: 700; }
+.shortcutSetupLink { width: fit-content; color: var(--accent); font-size: 11px; font-weight: 700; text-underline-offset: 3px; }
 .drawerActions { gap: 8px; margin-top: 10px; padding-top: 20px; border-top: 1px solid var(--border); }
 .scopeScrim { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 20px; background: rgb(32 34 31 / 28%); }
 .scopeDialog { width: min(430px, 100%); background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-panel); padding: 24px; }
@@ -526,6 +542,11 @@ strong > .priorityMark { font-size: 9px; }
   .mobileBottomNav .mobileAdd { color: var(--accent); font-weight: 700; }
   .mobileBottomNav .mobileAdd svg { background: var(--accent); color: white; border-radius: 9px; width: 34px; height: 30px; padding: 7px; }
   .eventDrawer { width: 100%; padding: 22px 20px calc(24px + env(safe-area-inset-bottom)); }
+  .eventReminderHeading { display: grid; }
+  .eventReminderHeading .compactButton { width: 100%; min-height: 44px; }
+  .eventReminderRow .formSplit { grid-template-columns: 1fr; }
+  .shortcutActions { display: grid; grid-template-columns: 1fr; }
+  .shortcutActions button { width: 100%; min-height: 44px; }
   .readingWorkspace { height: auto; min-height: calc(100dvh - 58px); }
   .readingHeader > svg { width: 26px; }
   .readingCapture { margin-bottom: 22px; }
