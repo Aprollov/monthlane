@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#53695b" />
+    <title>Monthlane 添加提醒 · 快捷指令配置</title>
+    <style>
+      :root { color-scheme: light; --ink:#292d29; --muted:#71766f; --line:#dedfd8; --green:#53695b; --soft:#f3f5f1; }
+      * { box-sizing: border-box; }
+      body { margin:0; background:#fbfaf6; color:var(--ink); font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+      main { width:min(760px,100%); margin:auto; padding:40px 22px 72px; }
+      h1,h2 { font-family:Georgia,"Times New Roman",serif; font-weight:500; line-height:1.2; }
+      h1 { margin:0 0 10px; font-size:clamp(30px,7vw,46px); }
+      h2 { margin:38px 0 12px; font-size:24px; }
+      p,li { color:var(--muted); }
+      strong { color:var(--ink); }
+      .eyebrow { margin:0 0 8px; color:var(--green); font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
+      .card { margin:18px 0; border:1px solid var(--line); border-radius:12px; background:white; padding:18px; }
+      ol { padding-left:24px; } li { margin:9px 0; }
+      code { color:var(--ink); background:var(--soft); border-radius:5px; padding:2px 5px; overflow-wrap:anywhere; }
+      pre { overflow:auto; padding:16px; border-radius:9px; background:#253128; color:#f4f6f2; font-size:13px; line-height:1.5; }
+      a { color:var(--green); }
+      .note { border-left:3px solid var(--green); padding-left:14px; }
+      @media (max-width:520px) { main { padding-top:28px; } .card { padding:15px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Monthlane · iPhone</p>
+      <h1>配置“Monthlane 添加提醒”快捷指令</h1>
+      <p>Monthlane 会把一个 URL 编码的 JSON 交给 Apple 快捷指令。快捷指令循环读取每条提醒，并写入系统提醒事项的 <strong>Monthlane</strong> 清单。</p>
+
+      <h2>一、准备清单和快捷指令</h2>
+      <ol class="card">
+        <li>打开 iPhone 的<strong>提醒事项</strong>，新建清单，名称必须是 <code>Monthlane</code>。</li>
+        <li>打开<strong>快捷指令</strong>，点右上角 <strong>+</strong>。</li>
+        <li>将快捷指令准确命名为 <code>Monthlane 添加提醒</code>。</li>
+      </ol>
+
+      <h2>二、解析 Monthlane 传入的 JSON</h2>
+      <ol class="card">
+        <li>添加动作 <strong>Get Dictionary from Input / 从输入中获取词典</strong>，输入选择“快捷指令输入”。</li>
+        <li>添加 <strong>Get Dictionary Value / 获取词典值</strong>，键填写 <code>reminders</code>。</li>
+        <li>添加 <strong>Repeat with Each / 对每项重复</strong>，重复对象选择上一步得到的 reminders。</li>
+        <li>在循环内部，分别对“重复项目”读取三个词典值：<code>title</code>、<code>triggerAt</code>、<code>notes</code>。</li>
+        <li>对 <code>triggerAt</code> 添加 <strong>Get Dates from Input / 从输入中获取日期</strong>，得到真正的日期时间变量。</li>
+      </ol>
+
+      <h2>三、循环创建系统提醒</h2>
+      <ol class="card">
+        <li>仍在循环内部添加 <strong>Add New Reminder / 添加新提醒事项</strong>。</li>
+        <li>标题选择 <code>title</code>，清单选择 <strong>Monthlane</strong>，备注选择 <code>notes</code>。</li>
+        <li>展开该动作的详细选项，开启<strong>日期</strong>和<strong>时间/提醒</strong>，日期时间选择第 5 步解析出的日期变量。不要只把时间写进备注；必须将它设置为提醒事项的实际日期和时间，系统才会到点通知。</li>
+        <li>确认“添加新提醒事项”位于“对每项重复”区块内，然后保存快捷指令。</li>
+      </ol>
+
+      <h2>收到的数据格式</h2>
+      <pre>{
+  "version": 1,
+  "list": "Monthlane",
+  "timeZone": "Asia/Shanghai",
+  "reminders": [
+    {
+      "title": "港澳通行证到期",
+      "triggerAt": "2027-08-02T09:00:00+08:00",
+      "notes": "可以申请换发"
+    }
+  ]
+}</pre>
+
+      <h2>四、先做两分钟真机测试</h2>
+      <ol class="card">
+        <li>回到 Monthlane 的事件编辑器，点 <strong>Test · 2 minutes</strong>。</li>
+        <li>允许网页打开快捷指令；首次运行时，允许快捷指令访问提醒事项。</li>
+        <li>确认“Monthlane”清单出现 <strong>Monthlane test reminder</strong>，且有两分钟后的实际日期与时间。</li>
+        <li>关闭 Monthlane、锁屏，等待系统通知。若无通知，请在“设置 → 通知 → 提醒事项”开启通知，并检查专注模式。</li>
+      </ol>
+
+      <p class="note"><strong>第一版是单向添加：</strong>Monthlane 无法确认快捷指令最终是否写入成功，也不会在编辑事件后更新已经创建的系统提醒。重复点击可能产生重复项，请在提醒事项中手动删除或更新旧记录。</p>
+      <p>Apple 官方参考：<a href="https://support.apple.com/guide/shortcuts/apd624386f42/ios" target="_blank" rel="noreferrer">通过 URL Scheme 运行快捷指令</a> · <a href="https://support.apple.com/102484" target="_blank" rel="noreferrer">在 iPhone 上使用提醒事项</a></p>
+    </main>
+  </body>
+</html>
