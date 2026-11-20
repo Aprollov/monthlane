@@ -64,9 +64,11 @@ test("structured reminders survive backup normalization and cloud-compatible rec
 });
 
 test("the two-minute test is a single reminder passed as encoded JSON", () => {
-  const payload = buildTwoMinuteTestPayload(new Date("2026-11-20T10:00:00+08:00"));
+  const now = new Date("2026-11-20T10:00:47+08:00");
+  const payload = buildTwoMinuteTestPayload(now);
   const url = shortcutRunUrl(payload);
   assert.equal(payload.reminders.length, 1);
+  assert.equal(new Date(payload.reminders[0].triggerAt).getTime() - now.getTime(), 120_000);
   assert.match(url, /^shortcuts:\/\/run-shortcut\?name=Monthlane%20%E6%B7%BB%E5%8A%A0%E6%8F%90%E9%86%92&input=text&text=/);
   const json = JSON.parse(decodeURIComponent(url.split("&text=")[1]));
   assert.equal(json.reminders[0].title, "Monthlane test reminder");
