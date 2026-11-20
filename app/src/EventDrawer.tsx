@@ -2,9 +2,10 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { MoreHorizontal, X } from "./icons";
-import { buildShortcutPayload, buildTwoMinuteTestPayload, remindersForEvent, shortcutRunUrl } from "./iphoneReminders";
+import { remindersForEvent } from "./iphoneReminders";
+import { ReminderPanel } from "./ReminderPanel";
 import { recurrenceLabel, recurrencePreset, recurrencePresetOptions, recurrenceRuleForPreset, type RecurrencePreset } from "./recurrence";
-import type { CalendarEvent, Category, EventDraft, EventReminder, RecurrenceFrequency, RecurrenceRule } from "./types";
+import type { CalendarEvent, Category, EventDraft, RecurrenceFrequency, RecurrenceRule } from "./types";
 
 type Props = {
   open: boolean;
@@ -28,7 +29,6 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
   });
   const [error, setError] = useState("");
   const [customRepeat, setCustomRepeat] = useState(false);
-  const [shortcutStatus, setShortcutStatus] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -42,7 +42,6 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
       notes: "", categoryId: defaultCategoryId ?? "life", recurrence: undefined, reminders: [],
     });
     setError("");
-    setShortcutStatus("");
     setCustomRepeat(Boolean(event?.recurrence && recurrencePreset(event.recurrence) === "custom"));
     window.setTimeout(() => titleInput.current?.focus(), 120);
   }, [date, defaultCategoryId, event, open]);
@@ -63,27 +62,6 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
     setDraft({ ...draft, recurrence: recurrenceRuleForPreset(preset, draft.startDate, draft.recurrence) });
   };
 
-  const reminderId = () => crypto.randomUUID();
-  const updateReminder = (id: string, next: EventReminder) => setDraft({
-    ...draft,
-    reminders: (draft.reminders ?? []).map((reminder) => reminder.id === id ? next : reminder),
-  });
-  const addReminder = () => setDraft({
-    ...draft,
-    reminders: [...(draft.reminders ?? []), { id: reminderId(), kind: "relative", minutesBefore: 30 }],
-  });
-  const removeReminder = (id: string) => setDraft({
-    ...draft,
-    reminders: (draft.reminders ?? []).filter((reminder) => reminder.id !== id),
-  });
-  const launchShortcut = (test = false) => {
-    if (!test && (!draft.title.trim() || !(draft.reminders?.length))) return;
-    const payload = test
-      ? buildTwoMinuteTestPayload()
-      : buildShortcutPayload({ ...draft, title: draft.title.trim() }, draft.reminders ?? []);
-    setShortcutStatus("已打开快捷指令");
-    window.location.href = shortcutRunUrl(payload);
-  };
 
   const submit = async (submitEvent: React.FormEvent) => {
     submitEvent.preventDefault();
@@ -244,56 +222,7 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
               )}
             </div>
           )}
-          <section className="eventReminderSection" aria-labelledby="event-reminders-heading">
-            <div className="eventReminderHeading">
-              <div>
-                <h3 id="event-reminders-heading">Reminders</h3>
-                <p>Saved with this event. All-day relative reminders use 9:00 AM.</p>
-              </div>
-              <button className="secondaryButton compactButton" type="button" onClick={addReminder}>+ Add reminder</button>
-            </div>
-            {(draft.reminders ?? []).map((reminder) => (
-              <div className="eventReminderRow" key={reminder.id}>
-                <div className="eventReminderRowHead">
-                  <select
-                    aria-label="Reminder type"
-                    value={reminder.kind}
-                    onChange={(e) => updateReminder(reminder.id, e.target.value === "relative"
-                      ? { id: reminder.id, kind: "relative", minutesBefore: 30 }
-                      : { id: reminder.id, kind: "absolute", date: draft.startDate, time: draft.allDay ? "09:00" : (draft.startTime || "09:00") })}
-                  >
-                    <option value="relative">Before event</option>
-                    <option value="absolute">Specific date &amp; time</option>
-                  </select>
-                  <button className="reminderRemoveButton" type="button" onClick={() => removeReminder(reminder.id)} aria-label="Remove reminder" title="Remove reminder"><X /></button>
-                </div>
-                {reminder.kind === "relative" ? (
-                  <label>
-                    Minutes before
-                    <input type="number" min="0" max="525600" inputMode="numeric" value={reminder.minutesBefore} onChange={(e) => updateReminder(reminder.id, {
-                      ...reminder,
-                      minutesBefore: Math.max(0, Number(e.target.value) || 0),
-                    })} />
-                  </label>
-                ) : (
-                  <div className="formSplit">
-                    <label>Date<input type="date" value={reminder.date} onChange={(e) => updateReminder(reminder.id, { ...reminder, date: e.target.value })} /></label>
-                    <label>Time<input type="time" value={reminder.time} onChange={(e) => updateReminder(reminder.id, { ...reminder, time: e.target.value })} /></label>
-                  </div>
-                )}
-              </div>
-            ))}
-            {!(draft.reminders?.length) && <p className="eventReminderEmpty">No reminders yet.</p>}
-            <div className="shortcutActions">
-              <button className="secondaryButton" type="button" onClick={() => launchShortcut(true)}>Test · 2 minutes</button>
-              <button className="secondaryButton" type="button" disabled={!draft.title.trim() || !(draft.reminders?.length)} onClick={() => launchShortcut(false)}>
-                Add to iPhone Reminders{(draft.reminders?.length ?? 0) > 1 ? ` (${draft.reminders!.length})` : ""}
-              </button>
-            </div>
-            {shortcutStatus && <p className="shortcutStatus" role="status" aria-live="polite">{shortcutStatus}</p>}
-            <p className="shortcutWarning">One-way add only. Editing this Monthlane event will not update reminders already created in Apple Reminders. Adding again may create duplicates.</p>
-            <a className="shortcutSetupLink" href="iphone-reminders-shortcut.html" target="_blank" rel="noreferrer">Set up “Monthlane 添加提醒” Shortcut</a>
-          </section>
+          <ReminderPanel kind="event" draft={draft} onChange={reminders => setDraft({...draft, reminders})} />
           <label>
             Notes
             <textarea rows={5} value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />

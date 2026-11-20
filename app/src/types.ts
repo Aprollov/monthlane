@@ -114,6 +114,7 @@ export type FlowTask = {
   scheduledTime?: string | null;
   estimatedMinutes?: number;
   dueDate?: string;
+  reminders?: EventReminder[];
   categoryId?: string;
   tags: string[];
   url?: string;

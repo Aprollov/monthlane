@@ -5,6 +5,7 @@ import { MoreHorizontal, X } from "../icons";
 import { recurrenceLabel, recurrencePreset, recurrencePresetOptions, recurrenceRuleForPreset, type RecurrencePreset } from "../recurrence";
 import type { Category, FlowTask, RecurrenceFrequency, TaskBucket, TaskPriority, TaskStatus, UpdateTaskInput } from "../types";
 import { useDialogFocus } from "../useDialogFocus";
+import { ReminderPanel } from "../ReminderPanel";
 import { flowBucket, isTaskDoneOn } from "./taskFilters";
 
 type Props = {
@@ -26,6 +27,7 @@ const draftFromTask = (task: FlowTask): UpdateTaskInput => ({
   scheduledDate: task.scheduledDate,
   scheduledTime: task.scheduledTime,
   dueDate: task.dueDate,
+  reminders: task.reminders,
   categoryId: task.categoryId,
   tags: task.tags,
   estimatedMinutes: task.estimatedMinutes,
@@ -140,6 +142,10 @@ export function TaskEditorDrawer({ task, categories, today, occurrenceDate, onCl
           </div>
           <label>Repeat<select value={repeatValue} onChange={(event) => setRepeat(event.target.value as RecurrencePreset)}>
             {recurrencePresetOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          <ReminderPanel kind="task" draft={{ title: draft.title ?? "", notes: draft.notes ?? "", reminders: draft.reminders,
+            startDate: (draft.recurrence && draft.scheduledDate === task.scheduledDate ? occurrenceDate : undefined) ?? draft.scheduledDate ?? "",
+            startTime: draft.scheduledTime ?? undefined, allDay: !draft.scheduledTime,
+          }} onChange={reminders => setDraft({...draft, reminders})} />
           </select></label>
           {draft.recurrence && repeatValue === "custom" && <div className="recurrencePanel taskRecurrencePanel">
             <p>{recurrenceLabel(draft.recurrence)}</p>

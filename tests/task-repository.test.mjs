@@ -27,6 +27,17 @@ const createHarness = () => {
   return { records, persistence, repository };
 };
 
+test("saving iPhone reminder rules does not schedule an inbox task", async () => {
+  const { repository, persistence } = createHarness();
+  const task = await repository.createTask({ title: "Practice" });
+  const reminders = [{ id: "one", kind: "absolute", date: "2028-01-02", time: "09:00" }];
+  await repository.updateTask(task.id, { reminders });
+  const saved = await persistence.get(task.id);
+  assert.deepEqual(saved.reminders, reminders);
+  assert.equal(saved.scheduledDate, undefined);
+  assert.equal(saved.bucket, "inbox");
+});
+
 test("moveTaskToDate updates the date and derives the flow bucket", async () => {
   const { records, repository } = createHarness();
   const task = await repository.createTask({ title: "Reschedule me" });
