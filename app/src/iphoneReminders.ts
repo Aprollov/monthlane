@@ -100,29 +100,5 @@ export const buildShortcutPayload = (
   })),
 });
 
-const localDateParts = (date: Date) => ({
-  date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
-  time: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
-});
-
-const localDateTimeFromDate = (date: Date) => {
-  const local = localDateParts(date);
-  return `${local.date}T${local.time}:${pad(date.getSeconds())}${offsetText(date.getTimezoneOffset())}`;
-};
-
-export const buildTwoMinuteTestPayload = (now = new Date()): ShortcutReminderPayload => {
-  const trigger = new Date(now.getTime() + 2 * 60_000);
-  return {
-    version: 1,
-    list: IPHONE_REMINDERS_LIST,
-    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? "local",
-    reminders: [{
-      title: "Monthlane test reminder",
-      triggerAt: localDateTimeFromDate(trigger),
-      notes: "Two-minute notification test created from Monthlane.",
-    }],
-  };
-};
-
 export const shortcutRunUrl = (payload: ShortcutReminderPayload) =>
   `shortcuts://run-shortcut?name=${encodeURIComponent(IPHONE_SHORTCUT_NAME)}&input=text&text=${encodeURIComponent(JSON.stringify(payload))}`;
