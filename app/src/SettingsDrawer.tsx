@@ -53,7 +53,7 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
 
   const restoreBackup = async (file?: File, mode: "merge" | "replace" = "merge") => {
     if (!file) return;
-    if (mode === "replace" && !window.confirm("This will replace all local events and tasks. Continue?")) {
+    if (mode === "replace" && !window.confirm("This will replace all local Monthlane data, including documents. Continue?")) {
       if (replaceFileInput.current) replaceFileInput.current.value = "";
       return;
     }
@@ -61,7 +61,7 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
       const backup = JSON.parse(await file.text()) as MonthlaneBackup;
       await importBackup(backup, mode);
       await onChanged();
-      notify(mode === "replace" ? "Local events and tasks were replaced." : "Backup merged successfully.");
+      notify(mode === "replace" ? "Local Monthlane data was replaced." : "Backup merged successfully.");
     } catch (restoreError) {
       notify(restoreError instanceof Error ? restoreError.message : "Could not restore this backup.");
     } finally {
@@ -139,7 +139,7 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
 
   const restoreNow = async () => {
     if (!session) return;
-    if (!window.confirm("Restore from cloud? Local events and tasks on this device will be replaced by the cloud copy.")) return;
+    if (!window.confirm("Restore from cloud? Local Monthlane data on this device will be replaced by the cloud copy.")) return;
     setBusy(true);
     setError("");
     try {
@@ -173,7 +173,7 @@ export function SettingsDrawer({ open, onClose, onChanged, notify }: Props) {
             <input ref={fileInput} className="visuallyHidden" type="file" accept="application/json,.json" onChange={(event) => void restoreBackup(event.target.files?.[0])} />
             <input ref={replaceFileInput} className="visuallyHidden" type="file" accept="application/json,.json" onChange={(event) => void restoreBackup(event.target.files?.[0], "replace")} />
           </div>
-          <p className="settingsHint">Merge keeps the newest version of each event and task. Replace requires confirmation and replaces all local events and tasks.</p>
+          <p className="settingsHint">Merge keeps the latest records, including documents and their calendar links. Replace overwrites local data; documents missing from the backup will be removed.</p>
         </section>
 
         <section className="settingsSection">

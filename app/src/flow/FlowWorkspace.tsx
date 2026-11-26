@@ -7,10 +7,10 @@ import { FlowBoard } from "./FlowBoard";
 import { LearningWorkspace, type LearningWorkspaceProps } from "../learning/LearningWorkspace";
 import { TaskList } from "./TaskList";
 
-export type FlowView = "month" | "flow" | "reading" | "completed" | "learning";
+export type FlowView = "month" | "flow" | "reading" | "completed" | "learning" | "documents";
 
 type Props = {
-  view: Exclude<FlowView, "month" | "reading">;
+  view: Exclude<FlowView, "month" | "reading" | "documents">;
   tasks: FlowTask[];
   categories: Category[];
   today: string;

@@ -4,6 +4,7 @@ import {
   type Category,
   type FlowTask,
   type GrowthMoment,
+  type DocumentRecord,
   type LearningProgressLog,
   type LearningTrack,
   type MonthlaneBackup,
@@ -14,7 +15,7 @@ import {
 import { getDeviceId } from "./device.ts";
 
 const DB_NAME = "monthlane";
-export const DB_VERSION = 5;
+export const DB_VERSION = 6;
 
 const requestValue = <T,>(request: IDBRequest<T>) =>
   new Promise<T>((resolve, reject) => {
@@ -73,6 +74,7 @@ export const upgradeMonthlaneDb = (db: SchemaDatabase) => {
     logs.createIndex("updatedAt", "updatedAt");
     logs.createIndex("deletedAt", "deletedAt");
   }
+  if (!db.objectStoreNames.contains("documents")) db.createObjectStore("documents", { keyPath: "id" });
   if (!db.objectStoreNames.contains("growthMoments")) {
     const moments = db.createObjectStore("growthMoments", { keyPath: "id" });
     moments.createIndex("updatedAt", "updatedAt");
@@ -263,6 +265,23 @@ export const listExceptions = async () => {
   return exceptions;
 };
 
+export async function listDocuments() {
+  const db = await openMonthlaneDb();
+  try { return await requestValue<DocumentRecord[]>(db.transaction("documents").objectStore("documents").getAll()); }
+  finally { db.close(); }
+}
+
+// Commit the first appointment and its link together, never leaving a half-saved renewal.
+export async function saveDocument(record: DocumentRecord, renewal?: CalendarEvent) {
+  const db = await openMonthlaneDb();
+  try {
+    const tx = db.transaction(renewal ? ["documents", "events"] : ["documents"], "readwrite");
+    tx.objectStore("documents").put(record);
+    if (renewal) tx.objectStore("events").put(renewal);
+    await transactionDone(tx);
+  } finally { db.close(); }
+}
+
 export const saveEvent = async (event: CalendarEvent) => {
   const db = await openMonthlaneDb();
   const tx = db.transaction("events", "readwrite");
@@ -285,8 +304,8 @@ export const softDeleteEvent = async (event: CalendarEvent) => {
 
 export const exportBackup = async (): Promise<MonthlaneBackupV2> => {
   const db = await openMonthlaneDb();
-  const tx = db.transaction(["events", "tasks", "readingItems", "categories", "recurrenceExceptions", "settings", "learningTracks", "learningProgressLogs", "growthMoments"]);
-  const [events, tasks, readingItems, categories, exceptions, settings, learningTracks, learningProgressLogs, growthMoments] = await Promise.all([
+  const tx = db.transaction(["events", "tasks", "readingItems", "categories", "recurrenceExceptions", "settings", "learningTracks", "learningProgressLogs", "growthMoments", "documents"]);
+  const [events, tasks, readingItems, categories, exceptions, settings, learningTracks, learningProgressLogs, growthMoments, documents] = await Promise.all([
     requestValue<CalendarEvent[]>(tx.objectStore("events").getAll()),
     requestValue<FlowTask[]>(tx.objectStore("tasks").getAll()),
     requestValue<ReadingItem[]>(tx.objectStore("readingItems").getAll()),
@@ -296,6 +315,7 @@ export const exportBackup = async (): Promise<MonthlaneBackupV2> => {
     requestValue<LearningTrack[]>(tx.objectStore("learningTracks").getAll()),
     requestValue<LearningProgressLog[]>(tx.objectStore("learningProgressLogs").getAll()),
     requestValue<GrowthMoment[]>(tx.objectStore("growthMoments").getAll()),
+    requestValue<DocumentRecord[]>(tx.objectStore("documents").getAll()),
   ]);
   db.close();
   const timestamp = new Date().toISOString();
@@ -313,6 +333,7 @@ export const exportBackup = async (): Promise<MonthlaneBackupV2> => {
     learningTracks,
     learningProgressLogs,
     growthMoments,
+    documents,
     syncMetadata: { lastUpdatedByDeviceId: getDeviceId(), revision: 1 },
   };
 };
@@ -389,6 +410,7 @@ export const normalizeBackup = (backup: MonthlaneBackup): MonthlaneBackupV2 => {
     settings?: Array<{ id: string; [key: string]: unknown }>;
     learningTracks?: LearningTrack[];
     learningProgressLogs?: LearningProgressLog[];
+    documents?: DocumentRecord[];
     growthMoments?: GrowthMoment[];
     syncMetadata?: MonthlaneBackupV2["syncMetadata"];
   };
@@ -420,6 +442,7 @@ export const normalizeBackup = (backup: MonthlaneBackup): MonthlaneBackupV2 => {
     settings: version === 2 && Array.isArray(candidate.settings) ? candidate.settings : [],
     learningTracks: Array.isArray(candidate.learningTracks) ? candidate.learningTracks : [],
     learningProgressLogs: Array.isArray(candidate.learningProgressLogs) ? candidate.learningProgressLogs : [],
+    documents: Array.isArray(candidate.documents) ? candidate.documents : [],
     growthMoments: Array.isArray(candidate.growthMoments) ? candidate.growthMoments.map((moment) => ({
       ...moment,
       calendarReminder: moment.calendarReminder ? {
@@ -445,6 +468,7 @@ export const mergeBackups = (localInput: MonthlaneBackup, incomingInput: Monthla
     readingItems: newerRecords(local.readingItems ?? [], incoming.readingItems ?? []),
     learningTracks: newerRecords(local.learningTracks ?? [], incoming.learningTracks ?? []),
     learningProgressLogs: newerRecords(local.learningProgressLogs ?? [], incoming.learningProgressLogs ?? []),
+    documents: newerRecords(local.documents ?? [], incoming.documents ?? []),
     growthMoments: newerRecords(local.growthMoments ?? [], incoming.growthMoments ?? []),
     categories: newerRecords(local.categories, incoming.categories),
     exceptions: newerRecords(local.exceptions, incoming.exceptions),
@@ -466,7 +490,7 @@ export const importBackup = async (backup: MonthlaneBackup, mode: "merge" | "rep
   const normalized = normalizeBackup(backup);
   const merged = prepareBackupImport(await exportBackup(), normalized, mode);
   const db = await openMonthlaneDb();
-  const stores = ["events", "tasks", "readingItems", "categories", "recurrenceExceptions", "settings", "learningTracks", "learningProgressLogs", "growthMoments"];
+  const stores = ["events", "tasks", "readingItems", "categories", "recurrenceExceptions", "settings", "learningTracks", "learningProgressLogs", "growthMoments", "documents"];
   const tx = db.transaction(stores, "readwrite");
   if (mode === "replace") for (const store of stores) tx.objectStore(store).clear();
   for (const event of merged.events) tx.objectStore("events").put(event);
@@ -477,6 +501,7 @@ export const importBackup = async (backup: MonthlaneBackup, mode: "merge" | "rep
   for (const setting of merged.settings ?? []) tx.objectStore("settings").put(setting);
   for (const track of merged.learningTracks ?? []) tx.objectStore("learningTracks").put(track);
   for (const log of merged.learningProgressLogs ?? []) tx.objectStore("learningProgressLogs").put(log);
+  for (const doc of merged.documents ?? []) tx.objectStore("documents").put(doc);
   for (const moment of merged.growthMoments ?? []) tx.objectStore("growthMoments").put(moment);
   await transactionDone(tx);
   db.close();

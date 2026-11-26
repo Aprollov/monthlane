@@ -21,6 +21,7 @@ export type CalendarEvent = {
   allDay: boolean;
   startTime?: string;
   endTime?: string;
+  location?: string;
   notes: string;
   categoryId: string;
   tags: string[];
@@ -63,8 +64,20 @@ export type Category = {
 
 export type EventDraft = Pick<
   CalendarEvent,
-  "title" | "startDate" | "allDay" | "startTime" | "endTime" | "notes" | "categoryId" | "recurrence" | "reminders"
+  "title" | "startDate" | "allDay" | "startTime" | "endTime" | "location" | "notes" | "categoryId" | "recurrence" | "reminders"
 >;
+
+export type DocumentRecord = {
+  id: string;
+  name: string;
+  expiry: string;
+  notes: string;
+  renewalEventId?: string;
+  appointment?: { date: string; time: string };
+  createdAt: string;
+  updatedAt: string;
+  deviceId: string;
+};
 
 export type MonthlaneBackupV1 = {
   version: 1;
@@ -87,6 +100,7 @@ export type MonthlaneBackupV2 = {
   settings?: Array<{ id: string; [key: string]: unknown }>;
   learningTracks?: LearningTrack[];
   learningProgressLogs?: LearningProgressLog[];
+  documents?: DocumentRecord[];
   growthMoments?: GrowthMoment[];
   syncMetadata?: {
     lastUpdatedByDeviceId: string;

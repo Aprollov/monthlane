@@ -1,0 +1,19 @@
+.documentsArea { min-width:0; overflow:auto; padding:24px clamp(14px,3vw,48px); }
+.documentsArea > header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:0 0 18px; }
+.documentsArea h1,.documentsArea h2 { font-family:Georgia,serif; margin:0; }
+.documentCard { border:1px solid var(--border); border-radius:10px; background:var(--surface); overflow:hidden; }
+.documentCard > p { padding:0 16px; }
+.documentRow { display:flex; align-items:baseline; justify-content:space-between; gap:12px; width:100%; min-height:48px; padding:13px 16px; border:0; border-bottom:1px solid var(--border); background:none; text-align:left; cursor:pointer; color:inherit; }
+.documentRow:last-child { border-bottom:0; }
+.documentRow:hover { background:var(--surface-secondary); }
+.documentRow strong,.documentDetail { overflow-wrap:anywhere; }
+.documentRow span,.documentDetail dt { color:var(--text-muted); font-size:13px; }
+.documentRow .expiryNear { color:#965639; }
+.documentDetail { padding:16px; display:grid; gap:12px; justify-items:start; }
+.documentDetail dl,.documentDetail dd { margin:0; }
+.documentDetail dt:not(:first-child) { margin-top:10px; }
+.documentDetail .eventForm { width:100%; max-width:32rem; padding:0; }
+.documentDetail .eventForm input,.documentDetail .eventForm textarea { min-width:0; max-width:100%; }
+.documentActions { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+.documentNotes { white-space:pre-wrap; }
+@media (max-width:700px) { .documentRow { display:grid; gap:4px; } .documentsArea { overflow:visible; } }

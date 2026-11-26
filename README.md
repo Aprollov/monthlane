@@ -60,6 +60,19 @@ with check (auth.uid() = user_id);
 Copy the project URL and publishable anon key from Supabase into Monthlane's
 Settings panel. Never paste the Supabase service-role key into the browser.
 
+## Documents
+
+Open Documents below Growth in the sidebar (More on mobile). Store a name, actual
+expiry date and optional notes; no ID number or scan is needed. Schedule renewal
+opens the event editor. Month and Documents share the same event, including its
+date, location and calendar. Record renewal starts a fresh cycle without deleting
+the old calendar event. A booking reminder is separate from event reminders;
+only **Add to iPhone Reminders** opens the existing shortcut.
+
+Documents are included in IndexedDB, JSON backups and the existing cloud merge.
+Older backups contain no documents: merging keeps local documents; replacing
+restores exactly the backup contents. Back up before replacing local data.
+
 ## Keyboard shortcuts
 
 - `N`: create an event on the selected day

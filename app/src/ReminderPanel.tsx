@@ -11,12 +11,22 @@ const describe = (r: EventReminder) => r.kind === "absolute"
   ? [r.date, r.time].filter(Boolean).join(" ") || "Specific date & time"
   : presets.get(r.minutesBefore) ?? `${r.minutesBefore} minutes before`;
 
+export function SendReminders({ draft, rules, disabled }: { draft: Draft; rules: EventReminder[]; disabled?: boolean }) {
+  const [sent, setSent] = useState("");
+  const url = shortcutRunUrl(buildShortcutPayload(draft, rules));
+  return <><div className="shortcutActions"><button className="secondaryButton" type="button" disabled={disabled} onClick={() => {
+    setSent(url); window.location.href = url;
+  }}>Add to iPhone Reminders{rules.length > 1 && ` (${rules.length})`}</button></div>
+  {sent === url && <p className="shortcutStatus" role="status">已打开快捷指令</p>}
+  <p className="shortcutWarning">Saving does not send reminders. Adding again may create duplicates; update previously sent reminders in Apple Reminders.</p></>;
+}
+
 export function ReminderPanel({ draft, kind, onChange }: { draft: Draft; kind: "event" | "task"; onChange: (rules: EventReminder[]) => void }) {
   const rules = draft.reminders ?? [];
-  const [status, setStatus] = useState("");
+
   const [custom, setCustom] = useState(false);
   const [minutes, setMinutes] = useState("");
-  const change = (next: EventReminder[]) => { setStatus(""); onChange(next); };
+  const change = (next: EventReminder[]) => { onChange(next); };
   const relative = (n: number) => rules.some(r => r.kind === "relative" && r.minutesBefore === n);
   const addRelative = (n: number) => change([...rules, { id: crypto.randomUUID(), kind: "relative", minutesBefore: n }]);
   const addAbsolute = () => change([...rules, { id: crypto.randomUUID(), kind: "absolute", date: draft.startDate || toDateKey(new Date()), time: (!draft.allDay && draft.startTime) || "09:00" }]);
@@ -45,11 +55,7 @@ export function ReminderPanel({ draft, kind, onChange }: { draft: Draft; kind: "
       {draft.startDate && custom && <div className="eventReminderRow"><label>Minutes before<input type="number" min="0" max="525600" inputMode="numeric" value={minutes} onChange={e => setMinutes(e.target.value)} /></label>
         <button type="button" className="secondaryButton" disabled={!validMinutes} onClick={() => { addRelative(Number(minutes)); setMinutes(""); setCustom(false); }}>Add interval</button></div>}
       {(!draft.startDate || custom) && <button type="button" className="reminderLink" onClick={addAbsolute}>+ Specific date &amp; time</button>}
-      {rules.length > 0 && <><div className="shortcutActions"><button className="secondaryButton" type="button" disabled={!ready} onClick={() => {
-        setStatus("已打开快捷指令"); window.location.href = shortcutRunUrl(buildShortcutPayload(draft, rules));
-      }}>Add to iPhone Reminders{rules.length > 1 && ` (${rules.length})`}</button></div>
-      <p className="shortcutWarning">Saving does not send reminders. Adding again may create duplicates; update previously sent reminders in Apple Reminders.</p></>}
-      {status && <p className="shortcutStatus" role="status">{status}</p>}
+      {rules.length > 0 && <SendReminders draft={draft} rules={rules} disabled={!ready} />}
       <a className="shortcutSetupLink" href="iphone-reminders-shortcut.html" target="_blank" rel="noreferrer">Set up “Monthlane 添加提醒” Shortcut</a>
     </div>
   </details>;

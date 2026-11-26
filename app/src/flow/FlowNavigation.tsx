@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, CheckCircle, GraduationCap, InboxIcon, Sliders } from "../icons";
+import { Archive, BookOpen, CheckCircle, GraduationCap, InboxIcon, Sliders } from "../icons";
 import type { FlowBucket } from "../types";
 import type { FlowView } from "./FlowWorkspace";
 
@@ -16,6 +16,7 @@ export function FlowNavigation({ activeView, onSelect, mobileBucket, onSelectInb
     { view: "flow", label: "Flow", icon: Sliders },
     { view: "reading", label: "Read Later", icon: BookOpen },
     { view: "learning", label: "Growth", icon: GraduationCap },
+    { view: "documents", label: "Documents", icon: Archive },
     { view: "completed", label: "Completed", icon: CheckCircle },
   ];
   return (

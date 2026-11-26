@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useId, useRef, useState } from "react";
 import { MoreHorizontal, X } from "./icons";
 import { remindersForEvent } from "./iphoneReminders";
 import { ReminderPanel } from "./ReminderPanel";
@@ -12,6 +12,8 @@ type Props = {
   date: string;
   event?: CalendarEvent;
   categories: Category[];
+  renewalName?: string;
+  linkedRenewal?: boolean;
   defaultCategoryId?: string;
   onClose: () => void;
   onSave: (draft: EventDraft) => Promise<void>;
@@ -19,9 +21,10 @@ type Props = {
   onConvert?: () => void;
 };
 
-export function EventDrawer({ open, date, event, categories, defaultCategoryId, onClose, onSave, onDelete, onConvert }: Props) {
+export function EventDrawer({ open, date, event, categories, renewalName, linkedRenewal, defaultCategoryId, onClose, onSave, onDelete, onConvert }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const titleId = useId();
+  const saving = useRef(false);
   const titleInput = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<EventDraft>({
     title: "", startDate: date, allDay: true, startTime: "09:00", endTime: "10:00",
@@ -30,21 +33,21 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
   const [error, setError] = useState("");
   const [customRepeat, setCustomRepeat] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
     setDraft(event ? {
       title: event.title, startDate: event.startDate, allDay: event.allDay,
       startTime: event.startTime ?? "09:00", endTime: event.endTime ?? "10:00",
-      notes: event.notes, categoryId: event.categoryId, recurrence: event.recurrence,
+      location: event.location, notes: event.notes, categoryId: event.categoryId, recurrence: event.recurrence,
       reminders: remindersForEvent(event),
     } : {
-      title: "", startDate: date, allDay: true, startTime: "09:00", endTime: "10:00",
+      title: renewalName ? `换领${renewalName}` : "", startDate: date, allDay: true, startTime: "09:00", endTime: "10:00",
       notes: "", categoryId: defaultCategoryId ?? "life", recurrence: undefined, reminders: [],
     });
     setError("");
     setCustomRepeat(Boolean(event?.recurrence && recurrencePreset(event.recurrence) === "custom"));
-    window.setTimeout(() => titleInput.current?.focus(), 120);
-  }, [date, defaultCategoryId, event, open]);
+    titleInput.current?.focus();
+  }, [date, defaultCategoryId, event, open, renewalName]);
 
   useEffect(() => {
     if (!open) return;
@@ -70,7 +73,11 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
       titleInput.current?.focus();
       return;
     }
-    await onSave({ ...draft, title: draft.title.trim() });
+    if (saving.current) return;
+    saving.current = true;
+    try { await onSave({ ...draft, title: draft.title.trim() }); }
+    catch { setError("Could not save the event. Please try again."); }
+    finally { saving.current = false; }
   };
 
   return (
@@ -108,7 +115,7 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
           {error && <p className="fieldError" id="event-title-error">{error}</p>}
           <label>
             Date
-            <input type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} />
+            <input type="date" required value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} />
           </label>
           <label className="checkRow">
             <input type="checkbox" checked={draft.allDay} onChange={(e) => setDraft({ ...draft, allDay: e.target.checked })} />
@@ -126,12 +133,12 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
               {categories.map((category) => <option value={category.id} key={category.id}>{category.name}</option>)}
             </select>
           </label>
-          <label>
+          {!linkedRenewal && <label>
             Repeat
             <select value={repeatPreset} onChange={(e) => setPreset(e.target.value as RecurrencePreset)}>
               {recurrencePresetOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
-          </label>
+          </label>}
           {draft.recurrence && (
             <div className="recurrencePanel">
               <p>{recurrenceLabel(draft.recurrence)}</p>
@@ -222,6 +229,7 @@ export function EventDrawer({ open, date, event, categories, defaultCategoryId, 
               )}
             </div>
           )}
+          {(linkedRenewal || event?.location) && <label>Location<input value={draft.location ?? ""} onChange={e => setDraft({ ...draft, location: e.target.value })} /></label>}
           <ReminderPanel kind="event" draft={draft} onChange={reminders => setDraft({...draft, reminders})} />
           <label>
             Notes
