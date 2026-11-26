@@ -12,6 +12,14 @@ type Props = {
   onView: (event: CalendarEvent) => void;
 };
 
+function CategoryMark({ category }: { category: string }) {
+  return <svg className="documentMark" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {category === "cards" ? <><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h4"/></> :
+      category === "visas" ? <><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="10" r="3.5"/><path d="M8.5 10h7M12 6.5q-2 3.5 0 7 2-3.5 0-7M9 17h6"/></> :
+      <><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><circle cx="8" cy="10" r="1.8"/><path d="M5 15q3-4 6 0m2-5h5m-5 4h4"/></>}
+  </svg>;
+}
+
 export function Documents({ records, events, today, onSave, onSchedule, onView }: Props) {
   const [selected, select] = useState<string>();
   const [form, setForm] = useState<"edit" | "appointment" | "renew" | null>(null);
@@ -52,13 +60,13 @@ export function Documents({ records, events, today, onSave, onSchedule, onView }
     }
   }
   return <section className="documentsArea">
-    <header><h1>Documents</h1>{!doc && !form && <button className="primaryButton" onClick={() => open(undefined, "edit")}>+ Add</button>}</header>
+    <header><div><p className="documentKicker">Personal records</p><h1>Documents</h1></div>{!doc && !form && <button className="primaryButton" onClick={() => open(undefined, "edit")}>+ Add</button>}</header>
     {!form && !doc ? <div className="documentCard">
-      {records.length === 0 && <p>No documents yet.</p>}
+      {records.length === 0 && <p className="documentsEmpty"><CategoryMark category="ids" />No documents yet. Use + Add to file your first one.</p>}
       {Object.entries(documentCategories).map(([key,label]) => {
         const group = records.filter(d => categoryOf(d) === key).sort((a,b) => a.expiry.localeCompare(b.expiry) || a.name.localeCompare(b.name));
         if (!group.length) return null;
-        return <section key={key} className="documentGroup"><h2>{label}</h2>{group.map(d => {
+        return <section key={key} className="documentGroup"><div className="documentGroupHead"><CategoryMark category={key} /><h2>{label}</h2><small aria-label={`${group.length} records`}>{String(group.length).padStart(2,"0")}</small></div>{group.map(d => {
           const scheduled = eventFor(d), status = expiryStatus(d,today);
           return <button className="documentRow" key={d.id} onClick={() => open(d.id)}>
             <strong>{d.name}</strong><span><time dateTime={d.expiry}>Expires {d.expiry}</time>
