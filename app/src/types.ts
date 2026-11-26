@@ -69,6 +69,7 @@ export type EventDraft = Pick<
 
 export type DocumentRecord = {
   id: string;
+  category?: "ids" | "visas" | "cards";
   name: string;
   expiry: string;
   notes: string;

@@ -2,9 +2,24 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { mergeBackups, normalizeBackup } from "../app/src/database.ts";
 import { buildShortcutPayload, shortcutRunUrl } from "../app/src/iphoneReminders.ts";
+import { categoryOf, expiryStatus } from "../app/src/documentExpiry.ts";
 
 const legacy = {version:1, events:[], exceptions:[], categories:[]};
 const record = {id:"doc",name:"港澳通行证",notes:"预约窗口",expiry:"2028-02-01",renewalEventId:"event",appointment:{date:"2027-08-02",time:"09:00"},updatedAt:"2026-11-26",createdAt:"2026-11-25",deviceId:"test"};
+test("legacy records group as IDs and preserve day precision", () => {
+  assert.equal(categoryOf(record),"ids");
+  assert.equal(expiryStatus(record,"2028-01-01"),"");
+  assert.equal(expiryStatus(record,"2028-01-02"),"Expiring soon");
+  assert.equal(expiryStatus(record,"2028-02-02"),"Expired");
+});
+test("a bank card expires by month and backup round trips never add a day", () => {
+  const card = {...record, category:"cards", expiry:"2028-02"};
+  const backup = {...normalizeBackup(legacy),documents:[card]};
+  assert.deepEqual(mergeBackups(legacy,JSON.parse(JSON.stringify(backup))).documents,[card]);
+  assert.equal(expiryStatus(card,"2028-01-31"),"");
+  assert.equal(expiryStatus(card,"2028-02-29"),"Expires this month");
+  assert.equal(expiryStatus(card,"2028-03-01"),"Expired");
+});
 test("old backups have no documents; sync preserves links and respects a finished cycle", () => {
   assert.deepEqual(normalizeBackup(legacy).documents, []);
   const local = {...normalizeBackup(legacy), documents:[record]};
